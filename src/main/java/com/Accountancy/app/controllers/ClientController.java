@@ -4,6 +4,7 @@ import com.Accountancy.app.dto.ClientDTO.ClientRequest;
 import com.Accountancy.app.dto.ClientDTO.ClientResponse;
 import com.Accountancy.app.services.ClientService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -41,7 +42,7 @@ public class ClientController {
 
     // POST /api/clients
     @PostMapping
-    public ResponseEntity<ClientResponse> createClient(@RequestBody ClientRequest request) {
+    public ResponseEntity<ClientResponse> createClient(@Valid @RequestBody ClientRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(clientService.createClient(request));
     }
@@ -49,7 +50,7 @@ public class ClientController {
     // PUT /api/clients/{id}
     @PutMapping("/{id}")
     public ResponseEntity<ClientResponse> updateClient(@PathVariable Integer id,
-                                                       @RequestBody ClientRequest request) {
+                                                       @Valid @RequestBody ClientRequest request) {
         return ResponseEntity.ok(clientService.updateClient(id, request));
     }
 

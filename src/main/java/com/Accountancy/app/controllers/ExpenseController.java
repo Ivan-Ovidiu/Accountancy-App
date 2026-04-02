@@ -5,6 +5,7 @@ import com.Accountancy.app.dto.ExpenseDTO.ExpenseResponse;
 import com.Accountancy.app.entities.Expense.ExpenseStatus;
 import com.Accountancy.app.services.ExpenseService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -58,7 +59,7 @@ public class ExpenseController {
 
     // POST /api/expenses  — creates expense as PENDING
     @PostMapping
-    public ResponseEntity<ExpenseResponse> createExpense(@RequestBody ExpenseRequest request) {
+    public ResponseEntity<ExpenseResponse> createExpense(@Valid @RequestBody ExpenseRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(expenseService.createExpense(request));
     }

@@ -5,6 +5,7 @@ import com.Accountancy.app.dto.InvoiceDTO.InvoiceResponse;
 import com.Accountancy.app.entities.Invoice.InvoiceStatus;
 import com.Accountancy.app.services.InvoiceService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -54,7 +55,7 @@ public class InvoiceController {
 
     // POST /api/invoices  — creates invoice as DRAFT
     @PostMapping
-    public ResponseEntity<InvoiceResponse> createInvoice(@RequestBody InvoiceRequest request) {
+    public ResponseEntity<InvoiceResponse> createInvoice(@Valid @RequestBody InvoiceRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(invoiceService.createInvoice(request));
     }

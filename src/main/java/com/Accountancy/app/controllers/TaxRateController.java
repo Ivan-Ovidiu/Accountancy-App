@@ -4,6 +4,7 @@ import com.Accountancy.app.dto.TaxRateDTO.TaxRateRequest;
 import com.Accountancy.app.dto.TaxRateDTO.TaxRateResponse;
 import com.Accountancy.app.services.TaxRateService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -35,7 +36,7 @@ public class TaxRateController {
 
     // POST /api/tax-rates
     @PostMapping
-    public ResponseEntity<TaxRateResponse> createTaxRate(@RequestBody TaxRateRequest request) {
+    public ResponseEntity<TaxRateResponse> createTaxRate(@Valid @RequestBody TaxRateRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(taxRateService.createTaxRate(request));
     }
@@ -43,7 +44,7 @@ public class TaxRateController {
     // PUT /api/tax-rates/{id}
     @PutMapping("/{id}")
     public ResponseEntity<TaxRateResponse> updateTaxRate(@PathVariable Integer id,
-                                                         @RequestBody TaxRateRequest request) {
+                                                         @Valid @RequestBody TaxRateRequest request) {
         return ResponseEntity.ok(taxRateService.updateTaxRate(id, request));
     }
 
