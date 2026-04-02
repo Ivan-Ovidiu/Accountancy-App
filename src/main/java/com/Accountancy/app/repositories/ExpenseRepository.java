@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-interface ExpenseRepository extends JpaRepository<Expense, Integer> {
+public interface ExpenseRepository extends JpaRepository<Expense, Integer> {
     List<Expense> findByUserId(Integer userId);
     List<Expense> findByStatus(Expense.ExpenseStatus status);
     List<Expense> findByExpenseDateBetween(LocalDate from, LocalDate to);

@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 @Entity
 @Table(name = "invoice_items")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
-class InvoiceItem {
+public class InvoiceItem {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 

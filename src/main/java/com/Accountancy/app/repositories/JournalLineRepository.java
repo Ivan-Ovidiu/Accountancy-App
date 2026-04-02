@@ -1,6 +1,6 @@
 package com.Accountancy.app.repositories;
 
-import com.Accountancy.app.entities.*;
+import com.Accountancy.app.entities.JournalLine;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -10,13 +10,16 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
-
 @Repository
-interface JournalLineRepository extends JpaRepository<JournalLine, Integer> {
+public interface JournalLineRepository extends JpaRepository<JournalLine, Integer> {
+
     List<JournalLine> findByJournalEntryId(Integer journalEntryId);
+
     List<JournalLine> findByAccountId(Integer accountId);
 
-    // Sum debits for an account within a date range (for ledger balance calculation)
+    // Used by auto-match — finds journal lines on a specific date
+    List<JournalLine> findByJournalEntryEntryDate(LocalDate entryDate);
+
     @Query("""
         SELECT COALESCE(SUM(jl.debitAmount), 0)
         FROM JournalLine jl

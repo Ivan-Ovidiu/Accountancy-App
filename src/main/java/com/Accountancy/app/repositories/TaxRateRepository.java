@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-interface TaxRateRepository extends JpaRepository<TaxRate, Integer> {
+public interface TaxRateRepository extends JpaRepository<TaxRate, Integer> {
     Optional<TaxRate> findByIsDefaultTrue();
     List<TaxRate> findByIsActiveTrue();
 }

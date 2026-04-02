@@ -11,7 +11,7 @@ import java.util.List;
 
 
 @Repository
-interface BankTransactionRepository extends JpaRepository<BankTransaction, Integer> {
+public interface BankTransactionRepository extends JpaRepository<BankTransaction, Integer> {
     List<BankTransaction> findByBankAccountId(Integer bankAccountId);
     List<BankTransaction> findByReconciliationStatus(BankTransaction.ReconciliationStatus status);
     List<BankTransaction> findByTransactionDateBetween(LocalDate from, LocalDate to);

@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-interface AccountRepository extends JpaRepository<Account, Integer> {
+public interface AccountRepository extends JpaRepository<Account, Integer> {
     Optional<Account> findByCode(String code);
     List<Account> findByType(Account.AccountType type);
     List<Account> findByParentIsNull();           // root accounts only

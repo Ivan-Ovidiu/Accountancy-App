@@ -8,7 +8,7 @@ import java.util.List;
 
 
 @Repository
-interface BankAccountRepository extends JpaRepository<BankAccount, Integer> {
+public interface BankAccountRepository extends JpaRepository<BankAccount, Integer> {
     List<BankAccount> findByUserId(Integer userId);
     List<BankAccount> findByIsActiveTrue();
 }

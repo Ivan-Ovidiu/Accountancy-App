@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-interface JournalEntryRepository extends JpaRepository<JournalEntry, Integer> {
+public interface JournalEntryRepository extends JpaRepository<JournalEntry, Integer> {
     Optional<JournalEntry> findByReferenceNumber(String referenceNumber);
     List<JournalEntry> findByStatus(JournalEntry.JournalStatus status);
     List<JournalEntry> findByEntryDateBetween(LocalDate from, LocalDate to);

@@ -9,7 +9,7 @@ import java.util.Optional;
 
 
 @Repository
-interface ClientRepository extends JpaRepository<Client, Integer> {
+public interface ClientRepository extends JpaRepository<Client, Integer> {
     Optional<Client> findByEmail(String email);
     List<Client> findByIsActiveTrue();
     List<Client> findByNameContainingIgnoreCase(String name);
