@@ -27,17 +27,23 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Integer> {
     Optional<String> findMaxReferenceNumber();
 
     @Query("""
-        SELECT COALESCE(SUM(i.total), 0)
-        FROM Invoice i
-        WHERE i.status = 'PAID'
-          AND i.issueDate BETWEEN :from AND :to
-    """)
-    BigDecimal sumPaidInvoicesBetween(@Param("from") LocalDate from, @Param("to") LocalDate to);
-
+    SELECT COALESCE(SUM(i.total), 0)
+    FROM Invoice i
+    WHERE i.status = :status
+      AND i.issueDate BETWEEN :from AND :to
+""")
+    BigDecimal sumPaidInvoicesBetween(
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to,
+            @Param("status") InvoiceStatus status
+    );
     @Query("""
-        SELECT COALESCE(SUM(i.total), 0)
-        FROM Invoice i
-        WHERE i.status IN ('SENT', 'OVERDUE')
-    """)
+    SELECT COALESCE(SUM(i.total), 0)
+    FROM Invoice i
+    WHERE i.status IN (
+        com.Accountancy.app.entities.Invoice.InvoiceStatus.SENT,
+        com.Accountancy.app.entities.Invoice.InvoiceStatus.OVERDUE
+    )
+""")
     BigDecimal sumOutstandingInvoices();
 }

@@ -271,17 +271,26 @@ public class InvoiceService {
         invoice.setJournalEntry(savedEntry);
     }
 
-    // Generates invoice number: INV-2024-00001
+    // Generates invoice number: INV-2026-00001
+    // Foloseste count + retry loop ca sa evite duplicate key errors
     private String generateInvoiceNumber() {
         String year = String.valueOf(LocalDate.now().getYear());
         String prefix = "INV-" + year + "-";
 
-        return invoiceRepository.findMaxReferenceNumber()
-                .map(last -> {
-                    int lastNum = Integer.parseInt(last.substring(last.lastIndexOf("-") + 1));
-                    return prefix + String.format("%05d", lastNum + 1);
-                })
-                .orElse(prefix + "00001");
+        // Ia toate numerele existente pentru anul curent si gaseste urmatorul disponibil
+        long count = invoiceRepository.findAll().stream()
+                .filter(i -> i.getInvoiceNumber().startsWith(prefix))
+                .count();
+
+        // Incearca numere pana gaseste unul liber
+        int candidate = (int) count + 1;
+        while (true) {
+            String number = prefix + String.format("%05d", candidate);
+            if (invoiceRepository.findByInvoiceNumber(number).isEmpty()) {
+                return number;
+            }
+            candidate++;
+        }
     }
 
     private Invoice findById(Integer id) {

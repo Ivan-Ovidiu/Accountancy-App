@@ -117,8 +117,9 @@ public class ExpenseService {
         }
 
         // Post journal entry
-        // DR Expense Account  — we spent money
-        // CR Bank/Cash        — money left our account
+        // Formula contabila:  6xx = 5121
+        // DR 6xx  Cont de cheltuială (ales de user) — cheltuiala crește
+        // CR 5121 Conturi la bănci în lei           — banii ies din bancă
         postExpenseJournalEntry(expense);
 
         expense.setStatus(ExpenseStatus.APPROVED);
@@ -142,26 +143,30 @@ public class ExpenseService {
     // PRIVATE HELPERS
     // ============================================================
 
+    // Posts the double-entry journal entry when expense is approved
+    // Formula contabila:  6xx = 5121
+    // DR 6xx  Cont de cheltuială — suma cheltuielii
+    // CR 5121 Conturi la bănci   — plata din contul bancar
     private void postExpenseJournalEntry(Expense expense) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByEmail(email).orElseThrow();
 
-        // Get bank account (default RON bank account)
-        Account bankAccount = accountRepository.findByCode("1010")
-                .orElseThrow(() -> new RuntimeException("Account 1010 (Bank RON) not found"));
+        // Cont 5121 — Conturi la bănci în lei (plata se face din bancă)
+        Account banca = accountRepository.findByCode("5121")
+                .orElseThrow(() -> new RuntimeException("Contul 5121 (Conturi la bănci în lei) nu există în planul de conturi. Adaugă-l mai întâi."));
 
-        // Create journal entry
+        // Create journal entry header
         JournalEntry entry = JournalEntry.builder()
                 .user(user)
                 .referenceNumber("EXP-" + expense.getId() + "-" + expense.getExpenseDate())
                 .entryDate(expense.getExpenseDate())
-                .description("Expense: " + expense.getDescription())
+                .description("Cheltuială: " + expense.getDescription())
                 .status(JournalStatus.POSTED)
                 .build();
 
         JournalEntry savedEntry = journalEntryRepository.save(entry);
 
-        // DR Expense account — expense increases
+        // DR 6xx — contul de cheltuială ales de user (ex: 604, 605, 612, 626, etc.)
         JournalLine debitLine = JournalLine.builder()
                 .journalEntry(savedEntry)
                 .account(expense.getAccount())
@@ -170,13 +175,13 @@ public class ExpenseService {
                 .description(expense.getDescription())
                 .build();
 
-        // CR Bank account — cash decreases
+        // CR 5121 — Conturi la bănci în lei (banii ies din bancă)
         JournalLine creditLine = JournalLine.builder()
                 .journalEntry(savedEntry)
-                .account(bankAccount)
+                .account(banca)
                 .debitAmount(BigDecimal.ZERO)
                 .creditAmount(expense.getAmount())
-                .description("Payment: " + expense.getDescription())
+                .description("Plată din bancă: " + expense.getDescription())
                 .build();
 
         journalLineRepository.save(debitLine);

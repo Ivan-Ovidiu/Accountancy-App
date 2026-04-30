@@ -3,6 +3,7 @@ package com.Accountancy.app.services;
 import com.Accountancy.app.dto.ReportDTO.*;
 import com.Accountancy.app.entities.Account;
 import com.Accountancy.app.entities.Account.AccountType;
+import com.Accountancy.app.entities.Invoice;
 import com.Accountancy.app.repositories.*;
 import org.springframework.stereotype.Service;
 
@@ -192,23 +193,41 @@ public class ReportService {
     // ============================================================
     public DashboardSummaryResponse getDashboardSummary() {
         LocalDate firstDayOfMonth = LocalDate.now().withDayOfMonth(1);
-        LocalDate today = LocalDate.now();
+        LocalDate endOfMonth = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
 
-        BigDecimal totalRevenue  = invoiceRepository.sumPaidInvoicesBetween(firstDayOfMonth, today);
-        BigDecimal totalExpenses = expenseRepository.sumApprovedExpensesBetween(firstDayOfMonth, today);
-        BigDecimal outstanding   = invoiceRepository.sumOutstandingInvoices();
-        BigDecimal paidInvoices  = invoiceRepository.sumPaidInvoicesBetween(firstDayOfMonth, today);
+        List<Account> revenueAccounts = accountRepository.findByType(AccountType.REVENUE);
+        List<Account> expenseAccounts = accountRepository.findByType(AccountType.EXPENSE);
+
+        BigDecimal totalRevenue = revenueAccounts.stream()
+                .map(a -> {
+                    BigDecimal credits = journalLineRepository.sumCreditsByAccountAndDateRange(a.getId(), firstDayOfMonth, endOfMonth);
+                    BigDecimal debits = journalLineRepository.sumDebitsByAccountAndDateRange(a.getId(), firstDayOfMonth, endOfMonth);
+                    return credits.subtract(debits);
+                })
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalExpenses = expenseAccounts.stream()
+                .map(a -> {
+                    BigDecimal debits = journalLineRepository.sumDebitsByAccountAndDateRange(a.getId(), firstDayOfMonth, endOfMonth);
+                    BigDecimal credits = journalLineRepository.sumCreditsByAccountAndDateRange(a.getId(), firstDayOfMonth, endOfMonth);
+                    return debits.subtract(credits);
+                })
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal outstanding = invoiceRepository.sumOutstandingInvoices();
 
         long pendingExpenses = expenseRepository
                 .findByStatus(com.Accountancy.app.entities.Expense.ExpenseStatus.PENDING)
                 .size();
+
+        BigDecimal unpaidCount = invoiceRepository.sumOutstandingInvoices();
 
         return new DashboardSummaryResponse(
                 totalRevenue,
                 totalExpenses,
                 totalRevenue.subtract(totalExpenses),
                 outstanding,
-                paidInvoices,
+                unpaidCount,
                 pendingExpenses
         );
     }
