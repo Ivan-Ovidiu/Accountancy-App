@@ -22,43 +22,54 @@ public class SecurityConfig {
 
     private final UserDetailsServiceImpl userDetailsService;
     private final JwtFilter jwtFilter;
+    private final OAuth2SuccessHandler oAuth2SuccessHandler; // ← ADDED
 
-    public SecurityConfig(UserDetailsServiceImpl userDetailsService, JwtFilter jwtFilter) {
+    public SecurityConfig(UserDetailsServiceImpl userDetailsService,
+                          JwtFilter jwtFilter,
+                          OAuth2SuccessHandler oAuth2SuccessHandler) { // ← ADDED
         this.userDetailsService = userDetailsService;
         this.jwtFilter = jwtFilter;
+        this.oAuth2SuccessHandler = oAuth2SuccessHandler; // ← ADDED
     }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // Disable CSRF — not needed for stateless JWT APIs
                 .csrf(AbstractHttpConfigurer::disable)
-
-                // Stateless — no sessions, every request must carry a JWT
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                // Define which endpoints are public and which require authentication
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()       // login & register — public
-                        .requestMatchers("/swagger-ui/**").permitAll()     // swagger — public
-                        .requestMatchers("/v3/api-docs/**").permitAll()    // swagger docs — public
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN") // admin only
-                        .anyRequest().authenticated()                      // everything else requires login
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/swagger-ui/**").permitAll()
+                        .requestMatchers("/v3/api-docs/**").permitAll()
+                        .requestMatchers("/login/oauth2/**").permitAll()          // ← ADDED
+                        .requestMatchers("/oauth2/authorization/**").permitAll()  // ← ADDED
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .anyRequest().authenticated()
                 )
 
-                // Register our JWT filter before Spring's default auth filter
+                // ── ADDED: OAuth2 login ───────────────────────────────────
+                .oauth2Login(oauth2 -> oauth2
+                        .authorizationEndpoint(endpoint ->
+                                endpoint.baseUri("/oauth2/authorization")
+                        )
+                        .redirectionEndpoint(endpoint ->
+                                endpoint.baseUri("/login/oauth2/code/*")
+                        )
+                        .successHandler(oAuth2SuccessHandler)
+                )
+                // ─────────────────────────────────────────────────────────
+
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    // BCrypt is the industry standard for password hashing
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    // AuthenticationManager is used by the login endpoint to verify credentials
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
