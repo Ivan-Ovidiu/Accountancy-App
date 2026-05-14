@@ -2,6 +2,7 @@ package com.Accountancy.app.controllers;
 
 import com.Accountancy.app.dto.BankOperationDTO.*;
 import com.Accountancy.app.services.BankOperationService;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,9 +31,16 @@ public class BankOperationController {
         return ResponseEntity.ok(bankOperationService.getAllByBankAccount(bankAccountId));
     }
 
-    // Creeaza operatiune si posteaza nota contabila automat
+    @Operation(summary = "Creeaza operatiune si posteaza nota contabila automat")
     @PostMapping
     public ResponseEntity<BankOperationResponse> createOperation(@RequestBody BankOperationRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(bankOperationService.createOperation(request));
+    }
+
+    @Operation(summary = "Sterge operatiune bancara: anuleaza nota contabila si reseteaza statusul facturii asociate")
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteOperation(@PathVariable Integer id) {
+        bankOperationService.deleteOperation(id);
+        return ResponseEntity.noContent().build();
     }
 }

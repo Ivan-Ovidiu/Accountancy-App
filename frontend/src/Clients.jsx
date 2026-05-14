@@ -6,7 +6,7 @@ const API_BASE = "http://localhost:8080";
 const PALETTE = ["#7b9cba","#7aab8a","#b09a6a","#9b8fba","#6b7a8d","#b07a7a","#7abaa8"];
 function avatarColor(name) { return PALETTE[(name?.charCodeAt(0)||0) % PALETTE.length]; }
 function initials(name)     { return (name||"?").split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase(); }
-function fmtDate(s)         { return s ? new Date(s).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : "—"; }
+function fmtDate(s)         { return s ? new Date(s).toLocaleDateString("ro-RO",{month:"short",day:"numeric",year:"numeric"}) : "—"; }
 function authHeaders()      { return { Authorization:`Bearer ${localStorage.getItem("token")}`, "Content-Type":"application/json" }; }
 
 const EMPTY = { name:"", email:"", phone:"", address:"", taxId:"" };
@@ -55,15 +55,15 @@ export default function Clients() {
     const close      = ()  => { setModal(null); setSelected(null); setErr(""); };
 
     const save = async () => {
-        if (!form.name.trim()) { setErr("Name is required."); return; }
+        if (!form.name.trim()) { setErr("Numele este obligatoriu."); return; }
         setSaving(true); setErr("");
         try {
             const url    = modal==="edit" ? `${API_BASE}/api/clients/${selected.id}` : `${API_BASE}/api/clients`;
             const method = modal==="edit" ? "PUT" : "POST";
             const res    = await fetch(url,{method,headers:authHeaders(),body:JSON.stringify({name:form.name,email:form.email||null,phone:form.phone||null,address:form.address||null,taxId:form.taxId||null})});
-            if (!res.ok) { setErr("Failed to save."); setSaving(false); return; }
+            if (!res.ok) { setErr("Eroare la salvare."); setSaving(false); return; }
             close(); load();
-        } catch { setErr("Server error."); }
+        } catch { setErr("Eroare server."); }
         setSaving(false);
     };
 
@@ -78,27 +78,22 @@ export default function Clients() {
 
             {/* ── HEADER ── */}
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:32 }}>
-                <div>
-                    <h1 style={{ fontSize:24, fontWeight:700, color:C.text, letterSpacing:"-0.5px", margin:0 }}>Clients</h1>
-                    <p style={{ fontSize:13, color:C.textDim, marginTop:5 }}>
-                        {loading ? "Loading..." : `${active.length} active client${active.length!==1?"s":""}`}
-                    </p>
+                {/* Search */}
+                <div style={{ display:"flex", alignItems:"center", gap:8, background:C.card, border:`1px solid ${C.border}`, borderRadius:10, padding:"8px 14px" }}>
+                    <SearchIcon color={C.textDim} />
+                    <input
+                        style={{ border:"none", background:"transparent", fontSize:13, color:C.text, fontFamily:"'Outfit',sans-serif", width:200, outline:"none" }}
+                        placeholder="Caută clienți..."
+                        value={search}
+                        onChange={e=>setSearch(e.target.value)}
+                    />
+                    {search && <button style={{ background:"none", border:"none", color:C.textDim, cursor:"pointer", fontSize:11, padding:0, lineHeight:1 }} onClick={()=>setSearch("")}>✕</button>}
                 </div>
                 <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                    {/* Search */}
-                    <div style={{ display:"flex", alignItems:"center", gap:8, background:C.card, border:`1px solid ${C.border}`, borderRadius:10, padding:"8px 14px" }}>
-                        <SearchIcon color={C.textDim} />
-                        <input
-                            style={{ border:"none", background:"transparent", fontSize:13, color:C.text, fontFamily:"'Outfit',sans-serif", width:200, outline:"none" }}
-                            placeholder="Search clients..."
-                            value={search}
-                            onChange={e=>setSearch(e.target.value)}
-                        />
-                        {search && <button style={{ background:"none", border:"none", color:C.textDim, cursor:"pointer", fontSize:11, padding:0, lineHeight:1 }} onClick={()=>setSearch("")}>✕</button>}
-                    </div>
+
                     {/* New */}
                     <button onClick={openCreate} style={{ display:"flex", alignItems:"center", gap:7, background:"#7b9cba", border:"none", borderRadius:10, padding:"9px 18px", color:C.isDark?"#0a0f17":"#fff", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>
-                        <span style={{ fontSize:18, lineHeight:1, fontWeight:300 }}>+</span> New Client
+                        <span style={{ fontSize:18, lineHeight:1, fontWeight:300 }}>+</span> Client nou
                     </button>
                 </div>
             </div>
@@ -113,7 +108,7 @@ export default function Clients() {
                     <table style={{ width:"100%", borderCollapse:"collapse" }}>
                         <thead>
                         <tr style={{ borderBottom:`1px solid ${C.border}` }}>
-                            {["Client","Tax ID","Contact","Address","Since",""].map((h,i) => (
+                            {["Client","CIF/CUI","Contact","Adresă","De la",""].map((h,i) => (
                                 <th key={i} style={{ fontSize:10, color:C.textDim, textTransform:"uppercase", letterSpacing:"0.7px", fontWeight:600, padding:"12px 20px", textAlign: i===5?"right":"left" }}>{h}</th>
                             ))}
                         </tr>
@@ -140,7 +135,7 @@ export default function Clients() {
                                 </div>
                                 <div>
                                     <p style={{ fontSize:15, fontWeight:600, color:C.text, margin:0 }}>{form.name||"New Client"}</p>
-                                    <p style={{ fontSize:11, color:C.textMid, margin:"2px 0 0" }}>{modal==="create"?"New client":"Edit client"}</p>
+                                    <p style={{ fontSize:11, color:C.textMid, margin:"2px 0 0" }}>{modal==="create"?"Client nou":"Editare client"}</p>
                                 </div>
                             </div>
                             <button onClick={close} style={{ background:"none", border:`1px solid ${C.border}`, borderRadius:8, color:C.textMid, fontSize:14, cursor:"pointer", padding:"4px 10px", lineHeight:1 }}>✕</button>
@@ -148,21 +143,21 @@ export default function Clients() {
 
                         {/* Fields */}
                         <div style={{ padding:"20px 24px", display:"flex", flexDirection:"column", gap:14 }}>
-                            <Field label="Full Name *"      val={form.name}    set={v=>setForm(f=>({...f,name:v}))}    ph="Company or person name" C={C} />
-                            <Field label="Tax ID (CIF/CUI)" val={form.taxId}   set={v=>setForm(f=>({...f,taxId:v}))}   ph="RO12345678" C={C} />
+                            <Field label="Nume complet *"      val={form.name}    set={v=>setForm(f=>({...f,name:v}))}    ph="Firmă sau persoană fizică" C={C} />
+                            <Field label="CIF / CUI" val={form.taxId}   set={v=>setForm(f=>({...f,taxId:v}))}   ph="RO12345678" C={C} />
                             <div style={{ display:"flex", gap:12 }}>
                                 <Field label="Email" val={form.email}   set={v=>setForm(f=>({...f,email:v}))}   ph="office@company.ro" type="email" C={C} />
-                                <Field label="Phone" val={form.phone}   set={v=>setForm(f=>({...f,phone:v}))}   ph="+40 7xx xxx xxx" C={C} />
+                                <Field label="Telefon" val={form.phone}   set={v=>setForm(f=>({...f,phone:v}))}   ph="+40 7xx xxx xxx" C={C} />
                             </div>
-                            <Field label="Address" val={form.address} set={v=>setForm(f=>({...f,address:v}))} ph="Street, City" C={C} />
+                            <Field label="Adresă" val={form.address} set={v=>setForm(f=>({...f,address:v}))} ph="Str. Exemplu, București" C={C} />
                             {err && <p style={{ fontSize:13, color:"#b07a7a", margin:0, padding:"8px 12px", background:"#b07a7a18", borderRadius:8, border:"1px solid #b07a7a30" }}>⚠ {err}</p>}
                         </div>
 
                         {/* Footer */}
                         <div style={{ display:"flex", justifyContent:"flex-end", gap:10, padding:"16px 24px", borderTop:`1px solid ${C.border}` }}>
-                            <button onClick={close} style={{ background:"transparent", border:`1px solid ${C.border2}`, borderRadius:9, padding:"9px 18px", color:C.textMid, fontSize:13, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>Cancel</button>
+                            <button onClick={close} style={{ background:"transparent", border:`1px solid ${C.border2}`, borderRadius:9, padding:"9px 18px", color:C.textMid, fontSize:13, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>Anulează</button>
                             <button onClick={save} disabled={saving} style={{ background:"#7b9cba", border:"none", borderRadius:9, padding:"9px 20px", color:C.isDark?"#0a0f17":"#fff", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif", opacity:saving?0.7:1 }}>
-                                {saving?"Saving...":modal==="create"?"Create Client":"Save Changes"}
+                                {saving?"Se salvează...":modal==="create"?"Creare client":"Salvează"}
                             </button>
                         </div>
                     </div>
@@ -174,18 +169,18 @@ export default function Clients() {
                 <Overlay onClose={close} C={C}>
                     <div style={{ background:C.card, border:`1px solid ${C.border2}`, borderRadius:18, width:"100%", maxWidth:400 }}>
                         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"20px 24px", borderBottom:`1px solid ${C.border}` }}>
-                            <span style={{ fontSize:16, fontWeight:600, color:C.text }}>Deactivate Client</span>
+                            <span style={{ fontSize:16, fontWeight:600, color:C.text }}>Dezactivare client</span>
                             <button onClick={close} style={{ background:"none", border:`1px solid ${C.border}`, borderRadius:8, color:C.textMid, fontSize:14, cursor:"pointer", padding:"4px 10px" }}>✕</button>
                         </div>
                         <div style={{ padding:"20px 24px" }}>
                             <p style={{ fontSize:14, color:C.textMid, lineHeight:1.7, margin:0 }}>
-                                Are you sure you want to deactivate <strong style={{ color:C.text }}>{selected?.name}</strong>? They will be hidden from all lists.
+                                Ești sigur că vrei să dezactivezi <strong style={{ color:C.text }}>{selected?.name}</strong>? Va fi ascuns din toate listele.
                             </p>
                         </div>
                         <div style={{ display:"flex", justifyContent:"flex-end", gap:10, padding:"16px 24px", borderTop:`1px solid ${C.border}` }}>
-                            <button onClick={close} style={{ background:"transparent", border:`1px solid ${C.border2}`, borderRadius:9, padding:"9px 18px", color:C.textMid, fontSize:13, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>Cancel</button>
+                            <button onClick={close} style={{ background:"transparent", border:`1px solid ${C.border2}`, borderRadius:9, padding:"9px 18px", color:C.textMid, fontSize:13, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>Anulează</button>
                             <button onClick={del} disabled={saving} style={{ background:"#b07a7a", border:"none", borderRadius:9, padding:"9px 20px", color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif", opacity:saving?0.7:1 }}>
-                                {saving?"Deactivating...":"Deactivate"}
+                                {saving?"Se dezactivează...":"Dezactivează"}
                             </button>
                         </div>
                     </div>
@@ -247,7 +242,7 @@ function TableRow({ client:c, i, onEdit, onDelete, C }) {
                 <div className="row-actions" style={{ display:"flex", gap:6, justifyContent:"flex-end", opacity:0, transition:"opacity 0.15s" }}>
                     <button onClick={()=>onEdit(c)}
                             style={{ background:"transparent", border:`1px solid ${C.border2}`, borderRadius:8, padding:"6px 12px", color:C.textMid, fontSize:12, cursor:"pointer", fontFamily:"'Outfit',sans-serif", display:"flex", alignItems:"center", gap:5, transition:"all 0.15s" }}>
-                        <EditIcon /> Edit
+                        <EditIcon /> Editează
                     </button>
                     <button onClick={()=>onDelete(c)}
                             style={{ background:"transparent", border:"1px solid #b07a7a30", borderRadius:8, padding:"6px 10px", color:"#b07a7a", fontSize:12, cursor:"pointer", display:"flex", alignItems:"center", transition:"all 0.15s" }}>
@@ -266,11 +261,11 @@ function EmptyState({ onAdd, C }) {
                 <svg width="22" height="22" viewBox="0 0 16 16" fill="none"><circle cx="6" cy="5" r="3" stroke="#7b9cba" strokeWidth="1.3"/><path d="M1 13c0-2.761 2.239-4 5-4s5 1.239 5 4" stroke="#7b9cba" strokeWidth="1.3" strokeLinecap="round"/></svg>
             </div>
             <div style={{ textAlign:"center" }}>
-                <p style={{ fontSize:15, fontWeight:600, color:C.text, margin:0 }}>No clients yet</p>
-                <p style={{ fontSize:13, color:C.textDim, marginTop:6 }}>Add your first client to get started</p>
+                <p style={{ fontSize:15, fontWeight:600, color:C.text, margin:0 }}>Niciun client</p>
+                <p style={{ fontSize:13, color:C.textDim, marginTop:6 }}>Adaugă primul client pentru a începe</p>
             </div>
             <button onClick={onAdd} style={{ background:"#7b9cba", border:"none", borderRadius:10, padding:"9px 20px", color:C.isDark?"#0a0f17":"#fff", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>
-                + New Client
+                + Client nou
             </button>
         </div>
     );

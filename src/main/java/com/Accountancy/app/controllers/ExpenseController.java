@@ -52,17 +52,9 @@ public class ExpenseController {
     }
 
     // GET /api/expenses/account/{accountId}
-    @GetMapping("/account/{accountId}")
-    public ResponseEntity<List<ExpenseResponse>> getExpensesByAccount(@PathVariable Integer accountId) {
-        return ResponseEntity.ok(expenseService.getExpensesByAccount(accountId));
-    }
 
     // POST /api/expenses  — creates expense as PENDING
-    @PostMapping
-    public ResponseEntity<ExpenseResponse> createExpense(@Valid @RequestBody ExpenseRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(expenseService.createExpense(request));
-    }
+
 
     // POST /api/expenses/{id}/approve  — PENDING → APPROVED + posts journal entry
     @PostMapping("/{id}/approve")

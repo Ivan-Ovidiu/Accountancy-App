@@ -26,6 +26,11 @@ public class Supplier {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    // OWNING SIDE — every supplier belongs to exactly one company
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "company_id", nullable = false)
+    private Company company;
+
     @OneToMany(mappedBy = "supplier", fetch = FetchType.LAZY)
     private List<SupplierInvoice> supplierInvoices;
 }

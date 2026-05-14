@@ -13,34 +13,34 @@ const SEM = {
 };
 
 const STATUS_META = {
-    PAID:    { label:"Paid",    color:"#7aab8a" },
-    SENT:    { label:"Sent",    color:"#7b9cba" },
-    OVERDUE: { label:"Overdue", color:"#b07a7a" },
-    DRAFT:   { label:"Draft",   color:"#6b7280" },
+    PAID:    { label:"Achitată",  color:"#7aab8a" },
+    SENT:    { label:"Trimisă",   color:"#7b9cba" },
+    OVERDUE: { label:"Restantă",  color:"#b07a7a" },
+    DRAFT:   { label:"Ciornă",    color:"#6b7280" },
 };
 
 const PERIODS = [
-    { key:"this_month",   label:"This Month"   },
-    { key:"last_month",   label:"Last Month"   },
-    { key:"this_quarter", label:"This Quarter" },
-    { key:"this_year",    label:"This Year"    },
-    { key:"custom",       label:"Custom Range" },
+    { key:"this_month",   label:"Luna curentă"  },
+    { key:"last_month",   label:"Luna trecută"  },
+    { key:"this_quarter", label:"Trimestrul curent" },
+    { key:"this_year",    label:"Anul curent"   },
+    { key:"custom",       label:"Interval personalizat" },
 ];
 
 function getPeriodDates(key, custom) {
     const now=new Date(), y=now.getFullYear(), m=now.getMonth();
     switch(key) {
-        case "this_month":   return { from:new Date(y,m,1), to:new Date(y,m+1,0), label:now.toLocaleString("en-US",{month:"long",year:"numeric"}) };
-        case "last_month":   return { from:new Date(y,m-1,1), to:new Date(y,m,0), label:new Date(y,m-1).toLocaleString("en-US",{month:"long",year:"numeric"}) };
-        case "this_quarter": { const q=Math.floor(m/3); return { from:new Date(y,q*3,1), to:new Date(y,q*3+3,0), label:`Q${q+1} ${y}` }; }
-        case "this_year":    return { from:new Date(y,0,1), to:new Date(y,11,31), label:`Full Year ${y}` };
+        case "this_month":   return { from:new Date(y,m,1), to:new Date(y,m+1,0), label:now.toLocaleString("ro-RO",{month:"long",year:"numeric"}) };
+        case "last_month":   return { from:new Date(y,m-1,1), to:new Date(y,m,0), label:new Date(y,m-1).toLocaleString("ro-RO",{month:"long",year:"numeric"}) };
+        case "this_quarter": { const q=Math.floor(m/3); return { from:new Date(y,q*3,1), to:new Date(y,q*3+3,0), label:`T${q+1} ${y}` }; }
+        case "this_year":    return { from:new Date(y,0,1), to:new Date(y,11,31), label:`Întreg Anul ${y}` };
         case "custom":       return custom?.from&&custom?.to ? { ...custom, label:`${fmtDisplay(custom.from)} – ${fmtDisplay(custom.to)}` } : getPeriodDates("this_month");
         default:             return getPeriodDates("this_month");
     }
 }
 
 function fmtDate(d)    { return d.toISOString().split("T")[0]; }
-function fmtDisplay(d) { return d.toLocaleDateString("en-US",{day:"numeric",month:"short",year:"numeric"}); }
+function fmtDisplay(d) { return d.toLocaleDateString("ro-RO",{day:"numeric",month:"short",year:"numeric"}); }
 function sameDay(a,b)  { return a&&b&&a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate(); }
 function between(d,a,b){ return d>=a&&d<=b; }
 function authHeaders() { return { Authorization:`Bearer ${localStorage.getItem("token")}`, "Content-Type":"application/json" }; }
@@ -111,7 +111,7 @@ function MiniCalendar({ onRangeSelect, initialFrom, initialTo, C }) {
                 <button onClick={nextMonth} style={{ background:"none", border:"none", color:C.textMid, fontSize:18, cursor:"pointer", padding:"0 6px" }}>›</button>
             </div>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:2 }}>
-                {["Su","Mo","Tu","We","Th","Fr","Sa"].map(d => <div key={d} style={{ fontSize:10, color:C.textDim, textAlign:"center", padding:"4px 0", fontWeight:500 }}>{d}</div>)}
+                {["Du","Lu","Ma","Mi","Jo","Vi","Sâ"].map(d => <div key={d} style={{ fontSize:10, color:C.textDim, textAlign:"center", padding:"4px 0", fontWeight:500 }}>{d}</div>)}
                 {cells.map((day,i) => {
                     if(!day) return <div key={`e${i}`}/>;
                     const d=new Date(viewYear,viewMonth,day);
@@ -131,9 +131,9 @@ function MiniCalendar({ onRangeSelect, initialFrom, initialTo, C }) {
             {start && (
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:12, paddingTop:10, borderTop:`1px solid ${C.border}` }}>
           <span style={{ color:C.textMid, fontSize:11 }}>
-            {start&&!end?`From ${fmtDisplay(start)} — pick end`:end?`${fmtDisplay(start)} → ${fmtDisplay(end)}`:""}
+            {start&&!end?`De la ${fmtDisplay(start)} — alege sfârșit`:end?`${fmtDisplay(start)} → ${fmtDisplay(end)}`:""}
           </span>
-                    {start&&end&&<button onClick={()=>onRangeSelect&&onRangeSelect(start,end)} style={{ background:C.accent, border:"none", borderRadius:6, padding:"5px 12px", color:C.isDark?"#0f1117":"#fff", fontSize:11, fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>Apply →</button>}
+                    {start&&end&&<button onClick={()=>onRangeSelect&&onRangeSelect(start,end)} style={{ background:C.accent, border:"none", borderRadius:6, padding:"5px 12px", color:C.isDark?"#0f1117":"#fff", fontSize:11, fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>Aplică →</button>}
                 </div>
             )}
         </div>
@@ -193,7 +193,7 @@ export default function Dashboard() {
     const isProfit   = (data?.netProfit??0) >= 0;
     const margin     = data?.totalRevenue ? Math.round((data.netProfit/data.totalRevenue)*100) : 0;
     const hour       = new Date().getHours();
-    const greeting   = hour<12?"Good morning":hour<18?"Good afternoon":"Good evening";
+    const greeting   = hour<12?"Bună dimineața":hour<18?"Bună ziua":"Bună seara";
     const totalInvValue = invoiceStats?.reduce((s,i)=>s+i.total,0)||1;
 
     return (
@@ -202,13 +202,13 @@ export default function Dashboard() {
             {/* HERO */}
             <div style={{ position:"relative", borderRadius:20, overflow:"visible", height:210, display:"flex", alignItems:"flex-end" }}>
                 <div style={{ position:"absolute", inset:0, background:C.card, borderRadius:20, overflow:"hidden" }} />
-                <img src="/Dashboard_photo.jpg" alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 60%", opacity: C.isDark ? 0.22 : 0.15, borderRadius:20 }} />
+                <img src="/SunRise_Cover.png" alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 44%", opacity: C.isDark ? 0.22 : 0.60, borderRadius:20 }} />
                 <div style={{ position:"absolute", inset:0, background: C.isDark ? "linear-gradient(90deg,rgba(15,17,23,0.98) 0%,rgba(15,17,23,0.75) 55%,rgba(15,17,23,0.15) 100%)" : "linear-gradient(90deg,rgba(240,242,248,0.98) 0%,rgba(240,242,248,0.8) 55%,rgba(240,242,248,0.1) 100%)", borderRadius:20 }} />
                 <div style={{ position:"relative", zIndex:2, padding:"0 36px 28px", flex:1 }}>
                     <p style={{ fontSize:12, color:C.textDim, marginBottom:8, textTransform:"uppercase", letterSpacing:"0.8px" }}>{greeting}, {user.name?.split(" ")[0]||"there"}</p>
                     {loading ? <MiniSpinner C={C} /> : (
                         <h1 style={{ fontSize:28, fontWeight:700, color:C.text, lineHeight:1.25, letterSpacing:"-0.5px", margin:"0 0 8px" }}>
-                            {isProfit?"You're profitable":"Watch your expenses"}<br />
+                            {"Profitul tău"}<br />
                             <span style={{ color:isProfit?SEM.profit:SEM.expenses }}>RON <CountUp value={data.netProfit} duration={900} delay={100} trigger={tick} /> net</span>
                         </h1>
                     )}
@@ -232,10 +232,10 @@ export default function Dashboard() {
 
             {/* KPI ROW */}
             <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:12 }}>
-                <KpiCard label="Total Revenue"  target={data?.totalRevenue??0}        color={SEM.revenue}  delay={0}   trigger={tick} loading={loading} C={C} />
-                <KpiCard label="Total Expenses" target={data?.totalExpenses??0}       color={SEM.expenses} delay={60}  trigger={tick} loading={loading} C={C} />
-                <KpiCard label="Net Profit"     target={data?.netProfit??0}           color={isProfit?SEM.profit:SEM.expenses} delay={120} trigger={tick} loading={loading} C={C} />
-                <KpiCard label="Outstanding"    target={data?.outstandingInvoices??0} color={SEM.warning}  delay={180} trigger={tick} loading={loading} C={C} />
+                <KpiCard label="Venituri totale"   target={data?.totalRevenue??0}        color={SEM.revenue}  delay={0}   trigger={tick} loading={loading} C={C} />
+                <KpiCard label="Cheltuieli totale" target={data?.totalExpenses??0}       color={SEM.expenses} delay={60}  trigger={tick} loading={loading} C={C} />
+                <KpiCard label="Profit net"        target={data?.netProfit??0}           color={isProfit?SEM.profit:SEM.expenses} delay={120} trigger={tick} loading={loading} C={C} />
+                <KpiCard label="Neîncasat"         target={data?.outstandingInvoices??0} color={SEM.warning}  delay={180} trigger={tick} loading={loading} C={C} />
             </div>
 
             {/* BOTTOM ROW */}
@@ -244,22 +244,22 @@ export default function Dashboard() {
                 {/* Pending */}
                 <div style={{ position:"relative", borderRadius:16, overflow:"hidden", minHeight:250, display:"flex", flexDirection:"column", justifyContent:"flex-end" }}>
                     <div style={{ position:"absolute", inset:0, background:C.card }} />
-                    <img src="/Dashboard_photo.jpg" alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", opacity:C.isDark?0.25:0.12 }} />
+                    <img src="/Mountain_Cover.png" alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", opacity:C.isDark?0.25:0.70 }} />
                     <div style={{ position:"absolute", inset:0, background: C.isDark ? "linear-gradient(0deg,rgba(15,17,23,0.98) 0%,rgba(15,17,23,0.6) 55%,rgba(15,17,23,0.05) 100%)" : "linear-gradient(0deg,rgba(240,242,248,0.98) 0%,rgba(240,242,248,0.7) 55%,rgba(240,242,248,0.05) 100%)" }} />
                     <div style={{ position:"relative", zIndex:2, padding:22, display:"flex", flexDirection:"column", gap:5 }}>
-                        <span style={{ fontSize:10, color:C.textDim, textTransform:"uppercase", letterSpacing:"1px" }}>Pending Approvals</span>
+                        <span style={{ fontSize:10, color:C.textDim, textTransform:"uppercase", letterSpacing:"1px" }}>Aprobări în așteptare</span>
                         <span style={{ fontSize:48, fontWeight:700, color:C.text, lineHeight:1, letterSpacing:"-2px" }}>
               {loading?"—":<CountUp value={data?.pendingExpensesCount??0} duration={600} delay={200} trigger={tick} />}
             </span>
-                        <span style={{ fontSize:12, color:C.textMid }}>expenses awaiting review</span>
-                        <button style={{ marginTop:14, background:`${C.accent}15`, border:`1px solid ${C.accent}30`, borderRadius:8, padding:"7px 14px", color:C.accent, fontSize:12, fontWeight:500, fontFamily:"'Outfit',sans-serif", cursor:"pointer", alignSelf:"flex-start" }}>Review now →</button>
+                        <span style={{ fontSize:12, color:C.textMid }}>cheltuieli în așteptare</span>
+                        <button style={{ marginTop:14, background:`${C.accent}15`, border:`1px solid ${C.accent}30`, borderRadius:8, padding:"7px 14px", color:C.accent, fontSize:12, fontWeight:500, fontFamily:"'Outfit',sans-serif", cursor:"pointer", alignSelf:"flex-start" }}>Verifică acum →</button>
                     </div>
                 </div>
 
                 {/* Invoice Status */}
                 <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:16, padding:"20px 22px", display:"flex", flexDirection:"column", gap:14 }}>
                     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                        <p style={{ fontSize:10, color:C.textDim, textTransform:"uppercase", letterSpacing:"0.8px", fontWeight:600, margin:0 }}>Invoice Status</p>
+                        <p style={{ fontSize:10, color:C.textDim, textTransform:"uppercase", letterSpacing:"0.8px", fontWeight:600, margin:0 }}>Status Facturi</p>
                         <span style={{ fontSize:11, color:C.textDim }}>{invoiceStats?.reduce((s,i)=>s+i.count,0)??0} total</span>
                     </div>
                     <StackedBar stats={invoiceStats} total={totalInvValue} trigger={tick} C={C} />
@@ -274,12 +274,12 @@ export default function Dashboard() {
 
                 {/* Quick Stats */}
                 <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:16, padding:"20px 22px", display:"flex", flexDirection:"column", gap:14 }}>
-                    <p style={{ fontSize:10, color:C.textDim, textTransform:"uppercase", letterSpacing:"0.8px", fontWeight:600, margin:0 }}>Quick Stats</p>
+                    <p style={{ fontSize:10, color:C.textDim, textTransform:"uppercase", letterSpacing:"0.8px", fontWeight:600, margin:0 }}>Statistici rapide</p>
                     <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
-                        <StatItem label="Paid Invoices"    target={data?.totalPaidInvoices??0}      prefix="RON " delay={200} trigger={tick} loading={loading} C={C} />
-                        <StatItem label="Pending Expenses" target={data?.pendingExpensesCount??0}   suffix=" items" delay={300} trigger={tick} loading={loading} C={C} />
-                        <StatItem label="Outstanding"      target={data?.outstandingInvoices??0}    prefix="RON " delay={400} trigger={tick} loading={loading} C={C} />
-                        <StatItem label="Net This Period"  target={data?.netProfit??0}              prefix="RON " delay={500} trigger={tick} loading={loading} C={C} />
+                        <StatItem label="Facturi achitate"    target={data?.totalPaidInvoices??0}      prefix="RON " delay={200} trigger={tick} loading={loading} C={C} />
+                        <StatItem label="Cheltuieli în așteptare" target={data?.pendingExpensesCount??0}   suffix=" intrări" delay={300} trigger={tick} loading={loading} C={C} />
+                        <StatItem label="Neîncasat"           target={data?.outstandingInvoices??0}    prefix="RON " delay={400} trigger={tick} loading={loading} C={C} />
+                        <StatItem label="Net perioadă"        target={data?.netProfit??0}              prefix="RON " delay={500} trigger={tick} loading={loading} C={C} />
                     </div>
                 </div>
             </div>
@@ -375,14 +375,14 @@ function AnalyticsCard({ period, customRange, tick, C }) {
         const cursor=new Date(from); cursor.setDate(1);
         while(cursor<=to) {
             const y=cursor.getFullYear(), m=cursor.getMonth();
-            points.push({ label:cursor.toLocaleString("en-US",{month:"short",year:"2-digit"}), from:new Date(y,m,1), to:new Date(y,m+1,0) });
+            points.push({ label:cursor.toLocaleString("ro-RO",{month:"short",year:"2-digit"}), from:new Date(y,m,1), to:new Date(y,m+1,0) });
             cursor.setMonth(cursor.getMonth()+1);
         }
         Promise.all(
             points.map(p =>
                 fetch(`${API_BASE}/api/reports/profit-and-loss?from=${fmtDate(p.from)}&to=${fmtDate(p.to)}`, {headers})
                     .then(r=>r.json())
-                    .then(d=>({ name:p.label, Revenue:d.totalRevenue||0, Expenses:d.totalExpenses||0 }))
+                    .then(d=>({ name:p.label, Venituri:d.totalRevenue||0, Cheltuieli:d.totalExpenses||0 }))
                     .catch(()=>({ name:p.label, Revenue:0, Expenses:0 }))
             )
         ).then(data=>{ setChartData(data); setChartLoading(false); });
@@ -402,15 +402,15 @@ function AnalyticsCard({ period, customRange, tick, C }) {
         <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:16, padding:"20px 22px", display:"flex", flexDirection:"column", gap:20 }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                 <div>
-                    <p style={{ fontSize:10, color:C.textDim, textTransform:"uppercase", letterSpacing:"0.8px", fontWeight:600, margin:0 }}>Analytics</p>
-                    <p style={{ fontSize:11, color:C.textDim, marginTop:3 }}>Revenue vs Expenses per month</p>
+                    <p style={{ fontSize:10, color:C.textDim, textTransform:"uppercase", letterSpacing:"0.8px", fontWeight:600, margin:0 }}>Analiză</p>
+                    <p style={{ fontSize:11, color:C.textDim, marginTop:3 }}>Venituri vs Cheltuieli pe lună</p>
                 </div>
                 <div style={{ display:"flex", gap:16, alignItems:"center" }}>
           <span style={{ fontSize:11, color:C.textMid, display:"flex", alignItems:"center", gap:6 }}>
-            <span style={{ width:8, height:8, borderRadius:2, background:SEM.revenue, display:"inline-block" }} />Revenue
+            <span style={{ width:8, height:8, borderRadius:2, background:SEM.revenue, display:"inline-block" }} />Venituri
           </span>
                     <span style={{ fontSize:11, color:C.textMid, display:"flex", alignItems:"center", gap:6 }}>
-            <span style={{ width:8, height:8, borderRadius:2, background:SEM.expenses, display:"inline-block" }} />Expenses
+            <span style={{ width:8, height:8, borderRadius:2, background:SEM.expenses, display:"inline-block" }} />Cheltuieli
           </span>
                 </div>
             </div>
@@ -423,8 +423,8 @@ function AnalyticsCard({ period, customRange, tick, C }) {
                         <XAxis dataKey="name" tick={{ fill:C.textDim, fontSize:11 }} axisLine={false} tickLine={false} />
                         <YAxis tick={{ fill:C.textDim, fontSize:11 }} axisLine={false} tickLine={false} tickFormatter={v=>`${(v/1000).toFixed(0)}k`} />
                         <Tooltip content={<CustomTooltip />} cursor={{ fill:`${C.accent}08` }} />
-                        <Bar dataKey="Revenue"  fill={SEM.revenue}  radius={[4,4,0,0]} maxBarSize={32} opacity={0.85} />
-                        <Bar dataKey="Expenses" fill={SEM.expenses} radius={[4,4,0,0]} maxBarSize={32} opacity={0.85} />
+                        <Bar dataKey="Venituri"   fill={SEM.revenue}  radius={[4,4,0,0]} maxBarSize={32} opacity={0.85} />
+                        <Bar dataKey="Cheltuieli" fill={SEM.expenses} radius={[4,4,0,0]} maxBarSize={32} opacity={0.85} />
                     </BarChart>
                 </ResponsiveContainer>
             )}

@@ -14,7 +14,7 @@ public class Account {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(nullable = false, unique = true, length = 20)
+    @Column(nullable = false, length = 20, unique = true)
     private String code;
 
     @Column(nullable = false, length = 150)
@@ -30,13 +30,10 @@ public class Account {
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 
-
-//OWNING SIDE RELATIONS:
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")
     private Account parent;
 
-//INVERSE SIDE RELATIONS:
     @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY)
     private List<Account> children;
 

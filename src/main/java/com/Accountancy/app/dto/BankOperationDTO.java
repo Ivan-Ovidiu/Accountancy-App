@@ -11,11 +11,13 @@ public class BankOperationDTO {
     public record BankOperationRequest(
             Integer bankAccountId,
             OperationType operationType,
-            Integer debitAccountId,     // doar pentru OTHER
-            Integer creditAccountId,    // doar pentru OTHER
+            Integer debitAccountId,
+            Integer creditAccountId,
             String description,
             BigDecimal amount,
-            LocalDate operationDate
+            LocalDate operationDate,
+            Integer supplierInvoiceId,  // ← NOU
+            Integer invoiceId           // ← NOU
     ) {}
 
     public record BankOperationResponse(

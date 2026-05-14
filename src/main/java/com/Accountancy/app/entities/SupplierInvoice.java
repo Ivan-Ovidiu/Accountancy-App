@@ -16,22 +16,18 @@ public class SupplierInvoice {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    // Furnizorul de la care am primit factura
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "supplier_id", nullable = false)
     private Supplier supplier;
 
-    // Userul care a inregistrat factura
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    // Contul de cheltuiala (6xx) ales de user
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "expense_account_id", nullable = false)
     private Account expenseAccount;
 
-    // Cota TVA aplicata
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tax_rate_id")
     private TaxRate taxRate;
@@ -46,7 +42,6 @@ public class SupplierInvoice {
     @JoinColumn(name = "payment_journal_entry_id")
     private JournalEntry paymentJournalEntry;
 
-    // Numarul facturii de la furnizor (ex: FA-2026-001)
     @Column(name = "invoice_number", nullable = false, length = 50)
     private String invoiceNumber;
 
@@ -67,5 +62,12 @@ public class SupplierInvoice {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    public enum SupplierInvoiceStatus { PENDING, PAID, OVERDUE, VOID }
+    /**
+     * PENDING    — factura primită, neînregistrată contabil; nu apare în rapoarte
+     * REGISTERED — înregistrată contabil (6xx+4426=401 postat); apare în rapoarte
+     * PAID       — plătită (401=5121 postat)
+     * OVERDUE    — înregistrată, neplătită, trecută de scadență
+     * VOID       — anulată
+     */
+    public enum SupplierInvoiceStatus { PENDING, REGISTERED, PAID, OVERDUE, VOID }
 }

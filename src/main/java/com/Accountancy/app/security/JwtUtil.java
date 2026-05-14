@@ -9,8 +9,22 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
+/**
+ * Issues two kinds of tokens:
+ *
+ *   1) Pre-auth token  — short-lived (5 min), proves the user authenticated
+ *                        but hasn't picked a company yet. Carries no companyId.
+ *                        Marked with claim "preAuth": true.
+ *
+ *   2) Final token     — long-lived (configured via app.jwt.expiration-ms),
+ *                        carries the selected companyId. Used for all
+ *                        protected endpoints once a company is chosen.
+ */
 @Component
 public class JwtUtil {
+
+    /** Pre-auth tokens are short-lived; user must pick a company quickly. */
+    private static final long PRE_AUTH_EXPIRATION_MS = 5 * 60 * 1000L;  // 5 minutes
 
     @Value("${app.jwt.secret}")
     private String jwtSecret;
@@ -22,28 +36,71 @@ public class JwtUtil {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
     }
 
-    // Called after successful login — generates a token for the user
-    public String generateToken(String email, String role) {
+    // ============================================================
+    // PRE-AUTH TOKEN — issued at /api/auth/login or after OAuth2,
+    // before the user picks a company.
+    // ============================================================
+    public String generatePreAuthToken(String email, String role) {
         return Jwts.builder()
                 .subject(email)
                 .claim("role", role)
+                .claim("preAuth", true)
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + PRE_AUTH_EXPIRATION_MS))
+                .signWith(getSigningKey())
+                .compact();
+    }
+
+    // ============================================================
+    // FINAL TOKEN — issued at /api/auth/select-company once the
+    // user has chosen which company to operate on.
+    // ============================================================
+    public String generateToken(String email, String role, Integer companyId) {
+        return Jwts.builder()
+                .subject(email)
+                .claim("role", role)
+                .claim("companyId", companyId)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
                 .signWith(getSigningKey())
                 .compact();
     }
 
-    // Extracts the email (subject) from a token
+    /**
+     * Backward-compat overload. Existing call sites that don't yet know about
+     * companies will still compile — but the produced token will be treated
+     * as a pre-auth token by the filter (no companyId set).
+     */
+    public String generateToken(String email, String role) {
+        return generatePreAuthToken(email, role);
+    }
+
+    // ============================================================
+    // EXTRACTORS
+    // ============================================================
     public String extractEmail(String token) {
         return parseClaims(token).getSubject();
     }
 
-    // Extracts the role claim from a token
     public String extractRole(String token) {
         return parseClaims(token).get("role", String.class);
     }
 
-    // Returns true if the token is valid and not expired
+    /** Returns the companyId claim, or null if this is a pre-auth token. */
+    public Integer extractCompanyId(String token) {
+        Object raw = parseClaims(token).get("companyId");
+        if (raw == null) return null;
+        if (raw instanceof Integer i) return i;
+        if (raw instanceof Number n) return n.intValue();
+        return null;
+    }
+
+    /** True if the token has the preAuth flag — i.e., no company selected yet. */
+    public boolean isPreAuthToken(String token) {
+        Boolean flag = parseClaims(token).get("preAuth", Boolean.class);
+        return Boolean.TRUE.equals(flag);
+    }
+
     public boolean isTokenValid(String token) {
         try {
             parseClaims(token);

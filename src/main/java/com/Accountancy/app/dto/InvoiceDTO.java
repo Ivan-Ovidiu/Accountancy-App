@@ -46,6 +46,28 @@ public class InvoiceDTO {
             List<InvoiceItemRequest> items
     ) {}
 
+    // Folosit pentru editarea facturilor ISSUED
+    public record InvoiceUpdateRequest(
+            @NotNull(message = "Client is required")
+            Integer clientId,
+
+            @NotNull(message = "Tax rate is required")
+            Integer taxRateId,
+
+            @NotNull(message = "Issue date is required")
+            LocalDate issueDate,
+
+            @NotNull(message = "Due date is required")
+            LocalDate dueDate,
+
+            @Size(max = 500)
+            String notes,
+
+            @NotEmpty(message = "Invoice must have at least one item")
+            @Valid
+            List<InvoiceItemRequest> items
+    ) {}
+
     public record InvoiceItemResponse(
             Integer id, String description, BigDecimal quantity,
             BigDecimal unitPrice, BigDecimal total, Integer accountId, String accountName

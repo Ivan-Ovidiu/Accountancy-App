@@ -1,27 +1,20 @@
 import { useTheme } from "./App";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 
 const API_BASE = "http://localhost:8080";
 
-const RECON_STATUS = {
-    UNMATCHED:        { label:"Unmatched",    color:"#b07a7a", bg:"#b07a7a18" },
-    MATCHED:          { label:"Matched",      color:"#7aab8a", bg:"#7aab8a18" },
-    MANUALLY_MATCHED: { label:"Manual Match", color:"#7b9cba", bg:"#7b9cba18" },
-    IGNORED:          { label:"Ignored",      color:"#6b7280", bg:"#6b728018" },
-};
-
 const OP_TYPES = [
-    { value:"COMMISSION",       label:"Comision bancar",  formula:"627 = 5121",  color:"#7b9cba",  hasCustomAccounts: false },
-    { value:"SUPPLIER_PAYMENT", label:"Plată furnizor",   formula:"401 = 5121",  color:"#b07a7a",  hasCustomAccounts: false },
-    { value:"CLIENT_RECEIPT",   label:"Încasare client",  formula:"5121 = 4111", color:"#7aab8a",  hasCustomAccounts: false },
-    { value:"INTEREST_EXP",     label:"Dobândă plătită",  formula:"666 = 5121",  color:"#b07a7a",  hasCustomAccounts: false },
-    { value:"INTEREST_INC",     label:"Dobândă încasată", formula:"5121 = 766",  color:"#7aab8a",  hasCustomAccounts: false },
-    { value:"OTHER",            label:"Altă operațiune",  formula:"DR ales = CR ales", color:"#6b7280", hasCustomAccounts: true  },
+    { value:"COMMISSION",       label:"Comision bancar",  formula:"627 = 5121",        color:"#7b9cba",  hasCustomAccounts: false },
+    { value:"SUPPLIER_PAYMENT", label:"Plată furnizor",   formula:"401 = 5121",        color:"#b07a7a",  hasCustomAccounts: false },
+    { value:"CLIENT_RECEIPT",   label:"Încasare client",  formula:"5121 = 4111",       color:"#7aab8a",  hasCustomAccounts: false },
+    { value:"INTEREST_EXP",     label:"Dobândă plătită",  formula:"666 = 5121",        color:"#b07a7a",  hasCustomAccounts: false },
+    { value:"INTEREST_INC",     label:"Dobândă încasată", formula:"5121 = 766",        color:"#7aab8a",  hasCustomAccounts: false },
+    { value:"OTHER",            label:"Altă operațiune",  formula:"DR ales = CR ales", color:"#6b7280",  hasCustomAccounts: true  },
 ];
 
 function authHeaders() { return { Authorization:`Bearer ${localStorage.getItem("token")}`, "Content-Type":"application/json" }; }
 function fmt(n)        { return new Intl.NumberFormat("ro-RO",{minimumFractionDigits:2,maximumFractionDigits:2}).format(n??0); }
-function fmtDate(s)    { return s ? new Date(s).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : "—"; }
+function fmtDate(s)    { return s ? new Date(s).toLocaleDateString("ro-RO",{month:"short",day:"numeric",year:"numeric"}) : "—"; }
 function today()       { return new Date().toISOString().split("T")[0]; }
 
 const EMPTY_OP = { operationType:"COMMISSION", debitAccountId:"", creditAccountId:"", bankSide:"credit", description:"", amount:"", operationDate:today() };
@@ -32,26 +25,27 @@ export default function Bank() {
 
     const [accounts, setAccounts]               = useState([]);
     const [selectedAccount, setSelectedAccount] = useState(null);
-    const [transactions, setTransactions]       = useState([]);
-    const [loading, setLoading]                 = useState(false);
-    const [filter, setFilter]                   = useState("ALL");
-    const [importing, setImporting]             = useState(false);
-    const [importResult, setImportResult]       = useState(null);
-    const [autoMatching, setAutoMatching]       = useState(false);
+    const [operations, setOperations]           = useState([]);
+    const [opsLoading, setOpsLoading]           = useState(false);
     const [newAccModal, setNewAccModal]         = useState(false);
     const [accForm, setAccForm]                 = useState({ bankName:"", accountNumber:"", accountName:"", currentBalance:"", currency:"RON" });
     const [savingAcc, setSavingAcc]             = useState(false);
-    const fileRef = useRef(null);
+    const [opModal, setOpModal]                 = useState(false);
+    const [opForm, setOpForm]                   = useState(EMPTY_OP);
+    const [savingOp, setSavingOp]               = useState(false);
+    const [opErr, setOpErr]                     = useState("");
+    const [allAccounts, setAllAccounts]         = useState([]);
+    const [viewOp, setViewOp]                   = useState(null);
 
-    const [activeTab, setActiveTab]     = useState("reconciliation");
-    const [operations, setOperations]   = useState([]);
-    const [opsLoading, setOpsLoading]   = useState(false);
-    const [opModal, setOpModal]         = useState(false);
-    const [opForm, setOpForm]           = useState(EMPTY_OP);
-    const [savingOp, setSavingOp]       = useState(false);
-    const [opErr, setOpErr]             = useState("");
-    const [allAccounts, setAllAccounts] = useState([]);
-    const [viewOp, setViewOp]           = useState(null);
+    // Parteneri
+    const [suppliers, setSuppliers]     = useState([]);
+    const [clients, setClients]         = useState([]);
+    const [supplierInvoices, setSupInv] = useState([]);
+    const [clientInvoices, setCliInv]   = useState([]);
+    const [selSupplier, setSelSupplier] = useState("");
+    const [selClient, setSelClient]     = useState("");
+    const [selSupInv, setSelSupInv]     = useState("");
+    const [selCliInv, setSelCliInv]     = useState("");
 
     useEffect(() => {
         fetch(`${API_BASE}/api/bank/accounts`, { headers:authHeaders() })
@@ -59,20 +53,16 @@ export default function Bank() {
             .catch(()=>{});
         fetch(`${API_BASE}/api/accounts`, { headers:authHeaders() })
             .then(r=>r.json()).then(d=>setAllAccounts(Array.isArray(d)?d:[])).catch(()=>{});
+        fetch(`${API_BASE}/api/suppliers`, { headers:authHeaders() })
+            .then(r=>r.json()).then(d=>setSuppliers(Array.isArray(d)?d:[])).catch(()=>{});
+        fetch(`${API_BASE}/api/clients`, { headers:authHeaders() })
+            .then(r=>r.json()).then(d=>setClients(Array.isArray(d)?d:[])).catch(()=>{});
     }, []);
 
     useEffect(() => {
         if (!selectedAccount) return;
-        loadTransactions(selectedAccount.id);
-        if (activeTab==="jurnal") loadOperations(selectedAccount.id);
+        loadOperations(selectedAccount.id);
     }, [selectedAccount]);
-
-    const loadTransactions = (id) => {
-        setLoading(true);
-        fetch(`${API_BASE}/api/bank/accounts/${id}/transactions`, { headers:authHeaders() })
-            .then(r=>r.json()).then(d=>{ setTransactions(Array.isArray(d)?d:[]); setLoading(false); })
-            .catch(()=>setLoading(false));
-    };
 
     const loadOperations = (id) => {
         setOpsLoading(true);
@@ -81,39 +71,20 @@ export default function Bank() {
             .catch(()=>setOpsLoading(false));
     };
 
-    const switchTab = (tab) => {
-        setActiveTab(tab);
-        if (tab==="jurnal" && selectedAccount) loadOperations(selectedAccount.id);
-    };
+    // ── Anulare operatiune bancara
+    const [showConfirmOp, setShowConfirmOp] = useState(false);
+    const [deletingOp, setDeletingOp]       = useState(false);
 
-    const handleImport = async (e) => {
-        const file = e.target.files[0];
-        if (!file || !selectedAccount) return;
-        setImporting(true); setImportResult(null);
-        const fd = new FormData(); fd.append("file", file);
-        try {
-            const res = await fetch(`${API_BASE}/api/bank/accounts/${selectedAccount.id}/import`, {
-                method:"POST", headers:{ Authorization:`Bearer ${localStorage.getItem("token")}` }, body: fd,
-            });
-            const data = await res.json();
-            setImportResult(data);
-            loadTransactions(selectedAccount.id);
-        } catch { setImportResult({ totalRows:0, imported:0, skipped:0, errors:["Import failed."] }); }
-        setImporting(false);
-        e.target.value = "";
-    };
-
-    const autoMatch = async () => {
-        if (!selectedAccount) return;
-        setAutoMatching(true);
-        await fetch(`${API_BASE}/api/bank/accounts/${selectedAccount.id}/auto-match`, { method:"POST", headers:authHeaders() }).catch(()=>{});
-        loadTransactions(selectedAccount.id);
-        setAutoMatching(false);
-    };
-
-    const unmatch = async (id) => {
-        await fetch(`${API_BASE}/api/bank/transactions/${id}/unmatch`, { method:"POST", headers:authHeaders() }).catch(()=>{});
-        loadTransactions(selectedAccount.id);
+    const deleteOperation = async () => {
+        if (!viewOp) return;
+        setDeletingOp(true);
+        await fetch(`${API_BASE}/api/bank-operations/${viewOp.id}`, {
+            method: "DELETE", headers: authHeaders(),
+        }).catch(() => {});
+        setDeletingOp(false);
+        setShowConfirmOp(false);
+        setViewOp(null);
+        if (selectedAccount) loadOperations(selectedAccount.id);
     };
 
     const saveAccount = async () => {
@@ -131,17 +102,62 @@ export default function Bank() {
         setSavingAcc(false);
     };
 
+    // Fix: REGISTERED (nu PENDING) pentru facturi furnizor neachitate
+    const onSupplierChange = (supplierId) => {
+        setSelSupplier(supplierId);
+        setSelSupInv("");
+        if (!supplierId) { setSupInv([]); return; }
+        fetch(`${API_BASE}/api/supplier-invoices/supplier/${supplierId}`, { headers:authHeaders() })
+            .then(r=>r.json())
+            .then(d => setSupInv(Array.isArray(d) ? d.filter(i => i.status === "REGISTERED" || i.status === "OVERDUE") : []))
+            .catch(()=>setSupInv([]));
+    };
+
+    // Fix: VALIDATED (nu SENT) pentru facturi client neîncasate
+    const onClientChange = (clientId) => {
+        setSelClient(clientId);
+        setSelCliInv("");
+        if (!clientId) { setCliInv([]); return; }
+        fetch(`${API_BASE}/api/invoices/client/${clientId}`, { headers:authHeaders() })
+            .then(r=>r.json())
+            .then(d => setCliInv(Array.isArray(d) ? d.filter(i => i.status === "VALIDATED" || i.status === "OVERDUE") : []))
+            .catch(()=>setCliInv([]));
+    };
+
+    const openOpModal = () => {
+        setOpForm(EMPTY_OP); setOpErr("");
+        setSelSupplier(""); setSelSupInv("");
+        setSelClient("");   setSelCliInv("");
+        setSupInv([]);      setCliInv([]);
+        setOpModal(true);
+    };
+
     const saveOperation = async () => {
         if (!selectedAccount)    { setOpErr("Selectează un cont bancar."); return; }
-        if (!opForm.description) { setOpErr("Descrierea este obligatorie."); return; }
         if (!opForm.amount || parseFloat(opForm.amount)<=0) { setOpErr("Introdu o sumă validă."); return; }
+        if (opForm.operationType==="SUPPLIER_PAYMENT" && !selSupplier) { setOpErr("Selectează furnizorul."); return; }
+        if (opForm.operationType==="CLIENT_RECEIPT"   && !selClient)   { setOpErr("Selectează clientul."); return; }
         if (opForm.operationType==="OTHER") {
             const otherAccId = opForm.bankSide==="debit" ? opForm.creditAccountId : opForm.debitAccountId;
             if (!otherAccId) { setOpErr("Selectează contul " + (opForm.bankSide==="debit"?"credit":"debit") + "."); return; }
         }
+
+        let desc = opForm.description.trim();
+        if (!desc) {
+            if (opForm.operationType==="SUPPLIER_PAYMENT") {
+                const sup = suppliers.find(s=>s.id===parseInt(selSupplier));
+                const inv = supplierInvoices.find(i=>i.id===parseInt(selSupInv));
+                desc = `Plată furnizor ${sup?.name||""}${inv?` — ${inv.invoiceNumber}`:""}`;
+            } else if (opForm.operationType==="CLIENT_RECEIPT") {
+                const cli = clients.find(c=>c.id===parseInt(selClient));
+                const inv = clientInvoices.find(i=>i.id===parseInt(selCliInv));
+                desc = `Încasare client ${cli?.name||""}${inv?` — ${inv.invoiceNumber}`:""}`;
+            }
+        }
+        if (!desc) { setOpErr("Descrierea este obligatorie."); return; }
+
         setSavingOp(true); setOpErr("");
         try {
-            // Pentru OTHER: gasim ID-ul contului 5121 din lista de conturi
             let debitId  = opForm.debitAccountId  ? parseInt(opForm.debitAccountId)  : null;
             let creditId = opForm.creditAccountId ? parseInt(opForm.creditAccountId) : null;
 
@@ -158,13 +174,15 @@ export default function Bank() {
             }
 
             const body = {
-                bankAccountId:   selectedAccount.id,
-                operationType:   opForm.operationType,
-                debitAccountId:  debitId,
-                creditAccountId: creditId,
-                description:     opForm.description,
-                amount:          parseFloat(opForm.amount),
-                operationDate:   opForm.operationDate,
+                bankAccountId:     selectedAccount.id,
+                operationType:     opForm.operationType,
+                debitAccountId:    debitId,
+                creditAccountId:   creditId,
+                description:       desc,
+                amount:            parseFloat(opForm.amount),
+                operationDate:     opForm.operationDate,
+                supplierInvoiceId: opForm.operationType==="SUPPLIER_PAYMENT" && selSupInv ? parseInt(selSupInv) : null,
+                invoiceId:         opForm.operationType==="CLIENT_RECEIPT"   && selCliInv ? parseInt(selCliInv) : null,
             };
             const res = await fetch(`${API_BASE}/api/bank-operations`, { method:"POST", headers:authHeaders(), body:JSON.stringify(body) });
             if (!res.ok) { const e=await res.json().catch(()=>{}); setOpErr(e?.message||"Eroare la salvare."); setSavingOp(false); return; }
@@ -174,14 +192,9 @@ export default function Bank() {
         setSavingOp(false);
     };
 
-    const filtered = filter==="ALL" ? transactions : transactions.filter(t=>t.reconciliationStatus===filter);
-    const counts = { ALL:transactions.length, UNMATCHED:0, MATCHED:0, MANUALLY_MATCHED:0 };
-    transactions.forEach(t=>{ if(counts[t.reconciliationStatus]!==undefined) counts[t.reconciliationStatus]++; });
-
     const selectedOpType = OP_TYPES.find(o=>o.value===opForm.operationType) || OP_TYPES[0];
     const isOther = opForm.operationType === "OTHER";
 
-    // Counts per operation type for summary cards
     const opCounts = OP_TYPES.reduce((acc, op) => {
         acc[op.value] = {
             count: operations.filter(o=>o.operationType===op.value).length,
@@ -196,12 +209,12 @@ export default function Bank() {
             {/* HEADER */}
             <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:24 }}>
                 <div>
-                    <h1 style={{ fontSize:24, fontWeight:700, color:C.text, letterSpacing:"-0.5px", margin:0 }}>Bancă</h1>
-                    <p style={{ fontSize:13, color:C.textDim, marginTop:5 }}>Reconciliere bancară și jurnal de bancă</p>
+                    <h1 style={{ fontSize:24, fontWeight:700, color:C.text, letterSpacing:"-0.5px", margin:0 }}>Jurnal de Bancă</h1>
+                    <p style={{ fontSize:13, color:C.textDim, marginTop:5 }}>Operațiuni bancare și note contabile automate</p>
                 </div>
                 <div style={{ display:"flex", gap:8 }}>
-                    {activeTab==="jurnal" && selectedAccount && (
-                        <button onClick={()=>{ setOpForm(EMPTY_OP); setOpErr(""); setOpModal(true); }}
+                    {selectedAccount && (
+                        <button onClick={openOpModal}
                                 style={{ display:"flex", alignItems:"center", gap:7, background:"#7b9cba", border:"none", borderRadius:10, padding:"9px 18px", color:C.isDark?"#0a0f17":"#fff", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>
                             <span style={{ fontSize:18, lineHeight:1, fontWeight:300 }}>+</span> Operațiune nouă
                         </button>
@@ -213,7 +226,7 @@ export default function Bank() {
             </div>
 
             {/* BANK ACCOUNTS */}
-            {accounts.length>0 && (
+            {accounts.length > 0 && (
                 <div style={{ display:"flex", gap:10, marginBottom:24, flexWrap:"wrap" }}>
                     {accounts.map(acc=>(
                         <button key={acc.id} onClick={()=>setSelectedAccount(acc)}
@@ -226,179 +239,90 @@ export default function Bank() {
                 </div>
             )}
 
-            {accounts.length===0 && (
+            {accounts.length === 0 && (
                 <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:16, padding:"40px", textAlign:"center", marginBottom:24 }}>
                     <p style={{ fontSize:14, color:C.textMid, margin:0 }}>Niciun cont bancar. Adaugă unul pentru a începe.</p>
                 </div>
             )}
 
-            {/* PAGE TABS */}
+            {/* SUMMARY CARDS */}
             {selectedAccount && (
-                <div style={{ display:"flex", borderBottom:`1px solid ${C.border}`, marginBottom:24 }}>
-                    <TabBtn label="Reconciliere bancară" active={activeTab==="reconciliation"} onClick={()=>switchTab("reconciliation")} C={C} />
-                    <TabBtn label="Jurnal de bancă" active={activeTab==="jurnal"} onClick={()=>switchTab("jurnal")} C={C} accent />
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12, marginBottom:24 }}>
+                    {OP_TYPES.map(op=>{
+                        const { count, total } = opCounts[op.value]||{ count:0, total:0 };
+                        return (
+                            <div key={op.value} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:"14px 18px" }}>
+                                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
+                                    <p style={{ fontSize:11, color:C.textDim, textTransform:"uppercase", letterSpacing:"0.5px", margin:0, fontWeight:600 }}>{op.label}</p>
+                                    <span style={{ fontSize:11, color:op.color, background:`${op.color}15`, border:`1px solid ${op.color}30`, borderRadius:6, padding:"2px 8px", fontWeight:600 }}>{count}</span>
+                                </div>
+                                <p style={{ fontSize:11, fontFamily:"monospace", color:C.textDim, margin:"0 0 4px" }}>{op.formula}</p>
+                                {count>0 && <p style={{ fontSize:13, fontWeight:600, color:C.text, margin:0 }}>RON {fmt(total)}</p>}
+                            </div>
+                        );
+                    })}
                 </div>
             )}
 
-            {/* ── TAB: RECONCILIATION ── */}
-            {activeTab==="reconciliation" && selectedAccount && (
-                <>
-                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr auto", gap:12, marginBottom:24, alignItems:"stretch" }}>
-                        <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:"16px 20px" }}>
-                            <p style={{ fontSize:11, color:C.textDim, textTransform:"uppercase", letterSpacing:"0.6px", margin:"0 0 8px" }}>Nepotrivite</p>
-                            <p style={{ fontSize:24, fontWeight:700, color:"#b07a7a", margin:0 }}>{counts.UNMATCHED}</p>
-                            <p style={{ fontSize:11, color:C.textDim, margin:"4px 0 0" }}>tranzacții necesită verificare</p>
-                        </div>
-                        <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:"16px 20px" }}>
-                            <p style={{ fontSize:11, color:C.textDim, textTransform:"uppercase", letterSpacing:"0.6px", margin:"0 0 8px" }}>Potrivite</p>
-                            <p style={{ fontSize:24, fontWeight:700, color:"#7aab8a", margin:0 }}>{counts.MATCHED + counts.MANUALLY_MATCHED}</p>
-                            <p style={{ fontSize:11, color:C.textDim, margin:"4px 0 0" }}>tranzacții reconciliate</p>
-                        </div>
-                        <div style={{ background:C.card, border:`1px dashed ${C.border2}`, borderRadius:14, padding:"16px 20px", display:"flex", flexDirection:"column", justifyContent:"center", gap:8 }}>
-                            <p style={{ fontSize:11, color:C.textDim, textTransform:"uppercase", letterSpacing:"0.6px", margin:0 }}>Import CSV</p>
-                            <p style={{ fontSize:11, color:C.textDim, margin:0 }}>Format: date, amount, description, reference</p>
-                            <button onClick={()=>fileRef.current?.click()} disabled={importing}
-                                    style={{ background:"#7b9cba18", border:"1px solid #7b9cba30", borderRadius:8, padding:"7px 14px", color:"#7b9cba", fontSize:12, fontWeight:500, cursor:"pointer", fontFamily:"'Outfit',sans-serif", opacity:importing?0.7:1, alignSelf:"flex-start" }}>
-                                {importing?"Se importă...":"Alege fișier CSV"}
-                            </button>
-                            <input ref={fileRef} type="file" accept=".csv" style={{ display:"none" }} onChange={handleImport} />
-                        </div>
-                        <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:"16px 20px", display:"flex", flexDirection:"column", justifyContent:"center", gap:8, minWidth:160 }}>
-                            <p style={{ fontSize:11, color:C.textDim, textTransform:"uppercase", letterSpacing:"0.6px", margin:0 }}>Auto Match</p>
-                            <p style={{ fontSize:11, color:C.textDim, margin:0 }}>Potrivire după sumă + dată</p>
-                            <button onClick={autoMatch} disabled={autoMatching}
-                                    style={{ background:"#7aab8a18", border:"1px solid #7aab8a30", borderRadius:8, padding:"7px 14px", color:"#7aab8a", fontSize:12, fontWeight:500, cursor:"pointer", fontFamily:"'Outfit',sans-serif", opacity:autoMatching?0.7:1, alignSelf:"flex-start" }}>
-                                {autoMatching?"Se procesează...":"Rulează Auto Match"}
-                            </button>
-                        </div>
+            {/* OPERATIONS TABLE */}
+            {selectedAccount && (
+                opsLoading ? (
+                    <div style={{ display:"flex", justifyContent:"center", paddingTop:60 }}><Spin C={C} /></div>
+                ) : operations.length===0 ? (
+                    <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:16, padding:"60px", textAlign:"center" }}>
+                        <p style={{ fontSize:15, fontWeight:600, color:C.text, margin:"0 0 8px" }}>Nicio operațiune înregistrată</p>
+                        <p style={{ fontSize:13, color:C.textDim, margin:"0 0 20px" }}>Înregistrează comisioane, plăți furnizori, încasări sau dobânzi</p>
+                        <button onClick={openOpModal}
+                                style={{ background:"#7b9cba", border:"none", borderRadius:10, padding:"9px 20px", color:C.isDark?"#0a0f17":"#fff", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>
+                            + Operațiune nouă
+                        </button>
                     </div>
-
-                    {importResult && (
-                        <div style={{ background:importResult.errors?.length?"#b07a7a12":"#7aab8a12", border:`1px solid ${importResult.errors?.length?"#b07a7a30":"#7aab8a30"}`, borderRadius:10, padding:"12px 16px", marginBottom:16, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-                            <p style={{ fontSize:13, color:importResult.errors?.length?"#b07a7a":"#7aab8a", margin:0 }}>
-                                Importate {importResult.imported} din {importResult.totalRows} rânduri · {importResult.skipped} omise
-                            </p>
-                            <button onClick={()=>setImportResult(null)} style={{ background:"none", border:"none", cursor:"pointer", color:C.textMid, fontSize:16 }}>✕</button>
-                        </div>
-                    )}
-
-                    <div style={{ display:"flex", gap:6, marginBottom:16 }}>
-                        {[["ALL","All"],["UNMATCHED","Unmatched"],["MATCHED","Matched"],["MANUALLY_MATCHED","Manual"]].map(([key,label])=>{
-                            const s = RECON_STATUS[key];
-                            return (
-                                <button key={key} onClick={()=>setFilter(key)}
-                                        style={{ border:`1px solid ${filter===key?(s?.color||C.border2):C.border}`, borderRadius:8, padding:"6px 14px", fontSize:12, fontWeight:filter===key?600:400, cursor:"pointer", fontFamily:"'Outfit',sans-serif", background:filter===key?(s?.bg||C.border):C.card, color:filter===key?(s?.color||C.text):C.textMid, transition:"all 0.15s" }}>
-                                    {label} <span style={{ opacity:0.6 }}>({counts[key]??transactions.length})</span>
-                                </button>
-                            );
-                        })}
-                    </div>
-
-                    {loading ? (
-                        <div style={{ display:"flex", justifyContent:"center", paddingTop:60 }}><Spin C={C} /></div>
-                    ) : filtered.length===0 ? (
-                        <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:16, padding:"60px", textAlign:"center" }}>
-                            <p style={{ fontSize:14, color:C.textMid, margin:0 }}>Nicio tranzacție. Importă un fișier CSV.</p>
-                        </div>
-                    ) : (
-                        <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:16, overflow:"hidden" }}>
-                            <table style={{ width:"100%", borderCollapse:"collapse" }}>
-                                <thead>
-                                <tr style={{ borderBottom:`1px solid ${C.border}` }}>
-                                    {["Dată","Descriere","Referință","Sumă","Tip","Status",""].map((h,i)=>(
-                                        <th key={i} style={{ fontSize:10, color:C.textDim, textTransform:"uppercase", letterSpacing:"0.7px", fontWeight:600, padding:"12px 20px", textAlign:i===6?"right":"left" }}>{h}</th>
-                                    ))}
-                                </tr>
-                                </thead>
-                                <tbody>
-                                {filtered.map((t,i)=>(
-                                    <TxRow key={t.id} tx={t} i={i} C={C} onUnmatch={unmatch} />
+                ) : (
+                    <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:16, overflow:"hidden" }}>
+                        <table style={{ width:"100%", borderCollapse:"collapse" }}>
+                            <thead>
+                            <tr style={{ borderBottom:`1px solid ${C.border}` }}>
+                                {["Dată","Descriere","Tip","Formulă","Sumă","Referință notă",""].map((h,i)=>(
+                                    <th key={i} style={{ fontSize:10, color:C.textDim, textTransform:"uppercase", letterSpacing:"0.7px", fontWeight:600, padding:"12px 20px", textAlign:i===6?"right":"left" }}>{h}</th>
                                 ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </>
-            )}
-
-            {/* ── TAB: JURNAL DE BANCĂ ── */}
-            {activeTab==="jurnal" && selectedAccount && (
-                <>
-                    {/* Summary cards — 3 per row */}
-                    <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12, marginBottom:24 }}>
-                        {OP_TYPES.map(op=>{
-                            const { count, total } = opCounts[op.value]||{ count:0, total:0 };
-                            return (
-                                <div key={op.value} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:"14px 18px" }}>
-                                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
-                                        <p style={{ fontSize:11, color:C.textDim, textTransform:"uppercase", letterSpacing:"0.5px", margin:0, fontWeight:600 }}>{op.label}</p>
-                                        <span style={{ fontSize:11, color:op.color, background:`${op.color}15`, border:`1px solid ${op.color}30`, borderRadius:6, padding:"2px 8px", fontWeight:600 }}>{count}</span>
-                                    </div>
-                                    <p style={{ fontSize:11, fontFamily:"monospace", color:C.textDim, margin:"0 0 4px" }}>{op.formula}</p>
-                                    {count>0 && <p style={{ fontSize:13, fontWeight:600, color:C.text, margin:0 }}>RON {fmt(total)}</p>}
-                                </div>
-                            );
-                        })}
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {operations.map((op,i)=>{
+                                const opMeta = OP_TYPES.find(o=>o.value===op.operationType)||OP_TYPES[5];
+                                return (
+                                    <tr key={op.id} className="op-row" onClick={()=>setViewOp(op)}
+                                        style={{ borderBottom:`1px solid ${C.border}`, cursor:"pointer", transition:"background 0.12s", animation:`fadeUp 0.3s ease ${i*20}ms both` }}>
+                                        <td style={{ padding:"13px 20px", fontSize:13, color:C.textMid }}>{fmtDate(op.operationDate)}</td>
+                                        <td style={{ padding:"13px 20px", fontSize:13, color:C.text }}>{op.description}</td>
+                                        <td style={{ padding:"13px 20px" }}>
+                                            <span style={{ fontSize:11, fontWeight:600, color:opMeta.color, background:`${opMeta.color}15`, border:`1px solid ${opMeta.color}30`, borderRadius:6, padding:"3px 9px" }}>{opMeta.label}</span>
+                                        </td>
+                                        <td style={{ padding:"13px 20px" }}>
+                                            <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+                                                <span style={{ fontSize:12, fontFamily:"monospace", fontWeight:700, color:"#7b9cba", background:"#7b9cba12", border:"1px solid #7b9cba25", borderRadius:5, padding:"2px 6px" }}>{op.debitAccountCode}</span>
+                                                <span style={{ fontSize:12, color:C.textDim }}>=</span>
+                                                <span style={{ fontSize:12, fontFamily:"monospace", fontWeight:700, color:"#7aab8a", background:"#7aab8a12", border:"1px solid #7aab8a25", borderRadius:5, padding:"2px 6px" }}>{op.creditAccountCode}</span>
+                                            </div>
+                                        </td>
+                                        <td style={{ padding:"13px 20px" }}>
+                                            <span style={{ fontSize:14, fontWeight:600, color:C.text }}>RON {fmt(op.amount)}</span>
+                                        </td>
+                                        <td style={{ padding:"13px 20px" }}>
+                                            <span style={{ fontSize:12, fontFamily:"monospace", color:C.textDim }}>{op.journalEntryReference||"—"}</span>
+                                        </td>
+                                        <td style={{ padding:"13px 20px", textAlign:"right" }}>
+                                            <div className="op-actions" style={{ opacity:0, transition:"opacity 0.15s" }}>
+                                                <span style={{ fontSize:11, color:C.textDim }}>View ›</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                            </tbody>
+                        </table>
                     </div>
-
-                    {opsLoading ? (
-                        <div style={{ display:"flex", justifyContent:"center", paddingTop:60 }}><Spin C={C} /></div>
-                    ) : operations.length===0 ? (
-                        <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:16, padding:"60px", textAlign:"center" }}>
-                            <p style={{ fontSize:15, fontWeight:600, color:C.text, margin:"0 0 8px" }}>Nicio operațiune înregistrată</p>
-                            <p style={{ fontSize:13, color:C.textDim, margin:"0 0 20px" }}>Înregistrează comisioane, plăți furnizori, încasări sau dobânzi</p>
-                            <button onClick={()=>{ setOpForm(EMPTY_OP); setOpErr(""); setOpModal(true); }}
-                                    style={{ background:"#7b9cba", border:"none", borderRadius:10, padding:"9px 20px", color:C.isDark?"#0a0f17":"#fff", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>
-                                + Operațiune nouă
-                            </button>
-                        </div>
-                    ) : (
-                        <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:16, overflow:"hidden" }}>
-                            <table style={{ width:"100%", borderCollapse:"collapse" }}>
-                                <thead>
-                                <tr style={{ borderBottom:`1px solid ${C.border}` }}>
-                                    {["Dată","Descriere","Tip","Formulă","Sumă","Referință notă",""].map((h,i)=>(
-                                        <th key={i} style={{ fontSize:10, color:C.textDim, textTransform:"uppercase", letterSpacing:"0.7px", fontWeight:600, padding:"12px 20px", textAlign:i===6?"right":"left" }}>{h}</th>
-                                    ))}
-                                </tr>
-                                </thead>
-                                <tbody>
-                                {operations.map((op,i)=>{
-                                    const opMeta = OP_TYPES.find(o=>o.value===op.operationType)||OP_TYPES[5];
-                                    return (
-                                        <tr key={op.id} className="op-row" onClick={()=>setViewOp(op)}
-                                            style={{ borderBottom:`1px solid ${C.border}`, cursor:"pointer", transition:"background 0.12s", animation:`fadeUp 0.3s ease ${i*20}ms both` }}>
-                                            <td style={{ padding:"13px 20px", fontSize:13, color:C.textMid }}>{fmtDate(op.operationDate)}</td>
-                                            <td style={{ padding:"13px 20px", fontSize:13, color:C.text }}>{op.description}</td>
-                                            <td style={{ padding:"13px 20px" }}>
-                                                <span style={{ fontSize:11, fontWeight:600, color:opMeta.color, background:`${opMeta.color}15`, border:`1px solid ${opMeta.color}30`, borderRadius:6, padding:"3px 9px" }}>{opMeta.label}</span>
-                                            </td>
-                                            <td style={{ padding:"13px 20px" }}>
-                                                <div style={{ display:"flex", alignItems:"center", gap:4 }}>
-                                                    <span style={{ fontSize:12, fontFamily:"monospace", fontWeight:700, color:"#7b9cba", background:"#7b9cba12", border:"1px solid #7b9cba25", borderRadius:5, padding:"2px 6px" }}>{op.debitAccountCode}</span>
-                                                    <span style={{ fontSize:12, color:C.textDim }}>=</span>
-                                                    <span style={{ fontSize:12, fontFamily:"monospace", fontWeight:700, color:"#7aab8a", background:"#7aab8a12", border:"1px solid #7aab8a25", borderRadius:5, padding:"2px 6px" }}>{op.creditAccountCode}</span>
-                                                </div>
-                                            </td>
-                                            <td style={{ padding:"13px 20px" }}>
-                                                <span style={{ fontSize:14, fontWeight:600, color:C.text }}>RON {fmt(op.amount)}</span>
-                                            </td>
-                                            <td style={{ padding:"13px 20px" }}>
-                                                <span style={{ fontSize:12, fontFamily:"monospace", color:C.textDim }}>{op.journalEntryReference||"—"}</span>
-                                            </td>
-                                            <td style={{ padding:"13px 20px", textAlign:"right" }}>
-                                                <div className="op-actions" style={{ opacity:0, transition:"opacity 0.15s" }}>
-                                                    <span style={{ fontSize:11, color:C.textDim }}>View ›</span>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </>
+                )
             )}
 
             {/* ── NEW OPERATION MODAL ── */}
@@ -417,7 +341,7 @@ export default function Bank() {
 
                         <div style={{ padding:"20px 24px", display:"flex", flexDirection:"column", gap:14 }}>
 
-                            {/* Tip operatiune — grid 3x2 */}
+                            {/* Tip operatiune */}
                             <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
                                 <label style={{ fontSize:11, color:C.textMid, textTransform:"uppercase", letterSpacing:"0.5px", fontWeight:500 }}>Tip Operațiune *</label>
                                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
@@ -431,36 +355,31 @@ export default function Bank() {
                                 </div>
                             </div>
 
-                            {/* Conturi pentru OTHER — cu toggle banca DR/CR */}
+                            {/* OTHER — conturi custom */}
                             {isOther && (
                                 <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-                                    {/* Toggle banca debit/credit */}
                                     <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
                                         <label style={{ fontSize:11, color:C.textMid, textTransform:"uppercase", letterSpacing:"0.5px", fontWeight:500 }}>Banca (5121) este pe *</label>
                                         <div style={{ display:"flex", gap:8 }}>
                                             <button onClick={()=>setOpForm(f=>({...f,bankSide:"debit",debitAccountId:"BANK",creditAccountId:""}))}
-                                                    style={{ flex:1, background:opForm.bankSide==="debit"?"#7b9cba15":C.bg, border:`1px solid ${opForm.bankSide==="debit"?"#7b9cba":C.border2}`, borderRadius:10, padding:"10px", cursor:"pointer", fontFamily:"'Outfit',sans-serif", transition:"all 0.15s" }}>
+                                                    style={{ flex:1, background:opForm.bankSide==="debit"?"#7b9cba15":C.bg, border:`1px solid ${opForm.bankSide==="debit"?"#7b9cba":C.border2}`, borderRadius:10, padding:"10px", cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>
                                                 <p style={{ fontSize:13, fontWeight:600, color:opForm.bankSide==="debit"?"#7b9cba":C.text, margin:0 }}>Debit</p>
                                                 <p style={{ fontSize:11, fontFamily:"monospace", color:C.textDim, margin:"2px 0 0" }}>5121 = cont ales</p>
                                             </button>
                                             <button onClick={()=>setOpForm(f=>({...f,bankSide:"credit",debitAccountId:"",creditAccountId:"BANK"}))}
-                                                    style={{ flex:1, background:opForm.bankSide==="credit"?"#7aab8a15":C.bg, border:`1px solid ${opForm.bankSide==="credit"?"#7aab8a":C.border2}`, borderRadius:10, padding:"10px", cursor:"pointer", fontFamily:"'Outfit',sans-serif", transition:"all 0.15s" }}>
+                                                    style={{ flex:1, background:opForm.bankSide==="credit"?"#7aab8a15":C.bg, border:`1px solid ${opForm.bankSide==="credit"?"#7aab8a":C.border2}`, borderRadius:10, padding:"10px", cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>
                                                 <p style={{ fontSize:13, fontWeight:600, color:opForm.bankSide==="credit"?"#7aab8a":C.text, margin:0 }}>Credit</p>
                                                 <p style={{ fontSize:11, fontFamily:"monospace", color:C.textDim, margin:"2px 0 0" }}>cont ales = 5121</p>
                                             </button>
                                         </div>
                                     </div>
-                                    {/* Contul celalalt */}
                                     <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
                                         <label style={{ fontSize:11, color:C.textMid, textTransform:"uppercase", letterSpacing:"0.5px", fontWeight:500 }}>
                                             {opForm.bankSide==="debit" ? "Cont Credit *" : "Cont Debit *"}
                                         </label>
                                         <select
                                             value={opForm.bankSide==="debit" ? opForm.creditAccountId : opForm.debitAccountId}
-                                            onChange={e=>{
-                                                if (opForm.bankSide==="debit") setOpForm(f=>({...f,creditAccountId:e.target.value}));
-                                                else setOpForm(f=>({...f,debitAccountId:e.target.value}));
-                                            }}
+                                            onChange={e=>{ if(opForm.bankSide==="debit") setOpForm(f=>({...f,creditAccountId:e.target.value})); else setOpForm(f=>({...f,debitAccountId:e.target.value})); }}
                                             style={{ background:C.bg, border:`1px solid ${C.border2}`, borderRadius:10, padding:"10px 14px", fontSize:13, color:C.text, fontFamily:"'Outfit',sans-serif", cursor:"pointer" }}>
                                             <option value="">Selectează contul...</option>
                                             {allAccounts.filter(a=>a.isActive!==false && a.subType!=="Clasa" && a.subType!=="Grupa").map(a=>(
@@ -468,35 +387,72 @@ export default function Bank() {
                                             ))}
                                         </select>
                                     </div>
-                                    {/* Preview formula */}
-                                    {(opForm.debitAccountId || opForm.creditAccountId) && (
-                                        <div style={{ background:C.isDark?"rgba(255,255,255,0.02)":"rgba(0,0,0,0.02)", border:`1px solid ${C.border}`, borderRadius:8, padding:"10px 14px" }}>
-                                            <p style={{ fontSize:10, color:C.textDim, textTransform:"uppercase", letterSpacing:"0.5px", margin:"0 0 6px" }}>Preview formulă</p>
-                                            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                                                {opForm.bankSide==="debit" ? (
-                                                    <>
-                                                        <span style={{ fontSize:12, fontFamily:"monospace", fontWeight:700, color:"#7b9cba", background:"#7b9cba12", border:"1px solid #7b9cba25", borderRadius:5, padding:"2px 6px" }}>5121</span>
-                                                        <span style={{ color:C.textDim }}>=</span>
-                                                        <span style={{ fontSize:12, fontFamily:"monospace", fontWeight:700, color:"#7aab8a", background:"#7aab8a12", border:"1px solid #7aab8a25", borderRadius:5, padding:"2px 6px" }}>
-                                                            {allAccounts.find(a=>a.id===parseInt(opForm.creditAccountId))?.code || "???"}
-                                                        </span>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <span style={{ fontSize:12, fontFamily:"monospace", fontWeight:700, color:"#7b9cba", background:"#7b9cba12", border:"1px solid #7b9cba25", borderRadius:5, padding:"2px 6px" }}>
-                                                            {allAccounts.find(a=>a.id===parseInt(opForm.debitAccountId))?.code || "???"}
-                                                        </span>
-                                                        <span style={{ color:C.textDim }}>=</span>
-                                                        <span style={{ fontSize:12, fontFamily:"monospace", fontWeight:700, color:"#7aab8a", background:"#7aab8a12", border:"1px solid #7aab8a25", borderRadius:5, padding:"2px 6px" }}>5121</span>
-                                                    </>
-                                                )}
-                                            </div>
+                                </div>
+                            )}
+
+                            {/* SUPPLIER PAYMENT */}
+                            {opForm.operationType==="SUPPLIER_PAYMENT" && (
+                                <div style={{ display:"flex", flexDirection:"column", gap:10, padding:"14px 16px", background:C.isDark?"rgba(176,122,122,0.06)":"rgba(176,122,122,0.04)", border:"1px solid #b07a7a30", borderRadius:12 }}>
+                                    <p style={{ fontSize:11, fontWeight:600, color:"#b07a7a", textTransform:"uppercase", letterSpacing:"0.6px", margin:0 }}>Detalii plată furnizor</p>
+                                    <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                                        <label style={{ fontSize:11, color:C.textMid, textTransform:"uppercase", letterSpacing:"0.5px", fontWeight:500 }}>Furnizor *</label>
+                                        <select value={selSupplier} onChange={e=>onSupplierChange(e.target.value)}
+                                                style={{ background:C.bg, border:`1px solid ${C.border2}`, borderRadius:10, padding:"10px 14px", fontSize:13, color:selSupplier?C.text:C.textDim, fontFamily:"'Outfit',sans-serif", cursor:"pointer" }}>
+                                            <option value="">Selectează furnizorul...</option>
+                                            {suppliers.filter(s=>s.isActive!==false).map(s=>(
+                                                <option key={s.id} value={s.id}>{s.name}{s.taxId?` — ${s.taxId}`:""}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    {selSupplier && (
+                                        <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                                            <label style={{ fontSize:11, color:C.textMid, textTransform:"uppercase", letterSpacing:"0.5px", fontWeight:500 }}>Factură neachitată (opțional)</label>
+                                            <select value={selSupInv}
+                                                    onChange={e=>{ setSelSupInv(e.target.value); if(e.target.value){ const inv=supplierInvoices.find(i=>i.id===parseInt(e.target.value)); if(inv?.total) setOpForm(f=>({...f,amount:String(inv.total)})); } }}
+                                                    style={{ background:C.bg, border:`1px solid ${C.border2}`, borderRadius:10, padding:"10px 14px", fontSize:13, color:selSupInv?C.text:C.textDim, fontFamily:"'Outfit',sans-serif", cursor:"pointer" }}>
+                                                <option value="">Fără factură specifică</option>
+                                                {supplierInvoices.map(inv=>(
+                                                    <option key={inv.id} value={inv.id}>{inv.invoiceNumber} — RON {fmt(inv.total)} ({inv.status==="OVERDUE"?"Restantă":"Înregistrată"})</option>
+                                                ))}
+                                            </select>
+                                            {supplierInvoices.length===0 && <p style={{ fontSize:12, color:C.textDim, margin:0 }}>Nicio factură înregistrată și neachitată pentru acest furnizor.</p>}
                                         </div>
                                     )}
                                 </div>
                             )}
 
-                            <FInput label="Descriere *" val={opForm.description} set={v=>setOpForm(f=>({...f,description:v}))} ph="Ex: Comision lunar, Plată furnizor ABC..." C={C} />
+                            {/* CLIENT RECEIPT */}
+                            {opForm.operationType==="CLIENT_RECEIPT" && (
+                                <div style={{ display:"flex", flexDirection:"column", gap:10, padding:"14px 16px", background:C.isDark?"rgba(122,171,138,0.06)":"rgba(122,171,138,0.04)", border:"1px solid #7aab8a30", borderRadius:12 }}>
+                                    <p style={{ fontSize:11, fontWeight:600, color:"#7aab8a", textTransform:"uppercase", letterSpacing:"0.6px", margin:0 }}>Detalii încasare client</p>
+                                    <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                                        <label style={{ fontSize:11, color:C.textMid, textTransform:"uppercase", letterSpacing:"0.5px", fontWeight:500 }}>Client *</label>
+                                        <select value={selClient} onChange={e=>onClientChange(e.target.value)}
+                                                style={{ background:C.bg, border:`1px solid ${C.border2}`, borderRadius:10, padding:"10px 14px", fontSize:13, color:selClient?C.text:C.textDim, fontFamily:"'Outfit',sans-serif", cursor:"pointer" }}>
+                                            <option value="">Selectează clientul...</option>
+                                            {clients.filter(c=>c.isActive!==false).map(c=>(
+                                                <option key={c.id} value={c.id}>{c.name}{c.taxId?` — ${c.taxId}`:""}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    {selClient && (
+                                        <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                                            <label style={{ fontSize:11, color:C.textMid, textTransform:"uppercase", letterSpacing:"0.5px", fontWeight:500 }}>Factură neîncasată (opțional)</label>
+                                            <select value={selCliInv}
+                                                    onChange={e=>{ setSelCliInv(e.target.value); if(e.target.value){ const inv=clientInvoices.find(i=>i.id===parseInt(e.target.value)); if(inv?.total) setOpForm(f=>({...f,amount:String(inv.total)})); } }}
+                                                    style={{ background:C.bg, border:`1px solid ${C.border2}`, borderRadius:10, padding:"10px 14px", fontSize:13, color:selCliInv?C.text:C.textDim, fontFamily:"'Outfit',sans-serif", cursor:"pointer" }}>
+                                                <option value="">Fără factură specifică</option>
+                                                {clientInvoices.map(inv=>(
+                                                    <option key={inv.id} value={inv.id}>{inv.invoiceNumber} — RON {fmt(inv.total)} ({inv.status==="OVERDUE"?"Restantă":"Validată"})</option>
+                                                ))}
+                                            </select>
+                                            {clientInvoices.length===0 && <p style={{ fontSize:12, color:C.textDim, margin:0 }}>Nicio factură validată și neîncasată pentru acest client.</p>}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            <FInput label="Descriere (auto-completată dacă e goală)" val={opForm.description} set={v=>setOpForm(f=>({...f,description:v}))} ph="Ex: Plată factură SINV-2026-00001..." C={C} />
 
                             <div style={{ display:"flex", gap:12 }}>
                                 <FInput label="Sumă (RON) *" val={opForm.amount} set={v=>setOpForm(f=>({...f,amount:v}))} type="number" ph="0.00" C={C} />
@@ -516,7 +472,7 @@ export default function Bank() {
                 </Overlay>
             )}
 
-            {/* ── VIEW OPERATION MODAL ── */}
+            {/* VIEW OPERATION MODAL */}
             {viewOp && (
                 <Overlay onClose={()=>setViewOp(null)} C={C}>
                     <div style={{ background:C.card, border:`1px solid ${C.border2}`, borderRadius:18, width:"100%", maxWidth:440 }}>
@@ -529,9 +485,9 @@ export default function Bank() {
                         </div>
                         <div style={{ padding:"20px 24px", display:"flex", flexDirection:"column", gap:14 }}>
                             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-                                <IBlock label="Sumă" val={`RON ${fmt(viewOp.amount)}`} C={C} />
-                                <IBlock label="Data" val={fmtDate(viewOp.operationDate)} C={C} />
-                                <IBlock label="Tip" val={OP_TYPES.find(o=>o.value===viewOp.operationType)?.label||viewOp.operationType} C={C} />
+                                <IBlock label="Sumă"           val={`RON ${fmt(viewOp.amount)}`} C={C} />
+                                <IBlock label="Data"           val={fmtDate(viewOp.operationDate)} C={C} />
+                                <IBlock label="Tip"            val={OP_TYPES.find(o=>o.value===viewOp.operationType)?.label||viewOp.operationType} C={C} />
                                 <IBlock label="Referință notă" val={viewOp.journalEntryReference||"—"} C={C} />
                             </div>
                             <div style={{ background:C.isDark?"rgba(255,255,255,0.02)":"rgba(0,0,0,0.02)", border:`1px solid ${C.border}`, borderRadius:10, padding:"12px 14px" }}>
@@ -545,8 +501,45 @@ export default function Bank() {
                                 </div>
                             </div>
                         </div>
+
+                        {/* Buton anulare — disponibil pentru orice operatiune */}
+                        <div style={{ borderTop:`1px solid ${C.border}`, padding:"14px 24px", display:"flex", justifyContent:"flex-end" }}>
+                            <button onClick={()=>setShowConfirmOp(true)} style={{
+                                background:"#b07a7a0d", border:"1px solid #b07a7a30",
+                                borderRadius:9, padding:"8px 16px", color:"#b07a7a",
+                                fontSize:12, fontWeight:500, cursor:"pointer", fontFamily:"'Outfit',sans-serif",
+                            }}>
+                                Anuleaza operatiunea
+                            </button>
+                        </div>
                     </div>
                 </Overlay>
+            )}
+
+            {/* CONFIRM ANULARE OPERATIUNE */}
+            {showConfirmOp && viewOp && (
+                <div style={{ position:"fixed", inset:0, zIndex:300, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(0,0,0,0.65)", backdropFilter:"blur(4px)" }}>
+                    <div style={{ background:C.card, border:`1px solid ${C.border2}`, borderRadius:18, padding:"32px", maxWidth:400, width:"calc(100% - 48px)" }}>
+                        <h3 style={{ fontSize:17, fontWeight:700, color:C.text, margin:"0 0 10px" }}>Anulezi operatiunea?</h3>
+                        <p style={{ fontSize:13, color:C.textMid, margin:"0 0 6px" }}>
+                            <strong>{viewOp.description}</strong>
+                        </p>
+                        <p style={{ fontSize:13, color:C.textDim, margin:"0 0 8px", lineHeight:1.6 }}>
+                            RON {fmt(viewOp.amount)} · {fmtDate(viewOp.operationDate)}
+                        </p>
+                        <p style={{ fontSize:13, color:"#b09a6a", background:"#b09a6a10", border:"1px solid #b09a6a25", borderRadius:10, padding:"10px 14px", margin:"0 0 24px", lineHeight:1.6 }}>
+                            ⚠ Nota contabila va fi stearsa si factura asociata va reveni la statusul anterior (neachitata).
+                        </p>
+                        <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
+                            <button onClick={()=>setShowConfirmOp(false)} style={{ background:"transparent", border:`1px solid ${C.border2}`, borderRadius:9, padding:"9px 18px", color:C.textMid, fontSize:13, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>
+                                Renunta
+                            </button>
+                            <button onClick={deleteOperation} disabled={deletingOp} style={{ background:"#b07a7a", border:"none", borderRadius:9, padding:"9px 20px", color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif", opacity:deletingOp?0.7:1 }}>
+                                {deletingOp ? "Se anuleaza..." : "Da, anuleaza"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* NEW BANK ACCOUNT MODAL */}
@@ -583,52 +576,18 @@ export default function Bank() {
             )}
 
             <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
-        @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes fadeIn { from{opacity:0} to{opacity:1} }
-        @keyframes spin   { to{transform:rotate(360deg)} }
-        input::placeholder { color:${C.textDim}; }
-        input[type="date"]::-webkit-calendar-picker-indicator { filter:${C.isDark?"invert(1)":"none"}; opacity:0.5; }
-        input:focus,select:focus { outline:none; border-color:#7b9cba !important; }
-        button:focus { outline:none; }
-        .tx-row:hover { background:${C.isDark?"rgba(255,255,255,0.025)":"rgba(0,0,0,0.025)"}!important; }
-        .op-row:hover { background:${C.isDark?"rgba(255,255,255,0.025)":"rgba(0,0,0,0.025)"}!important; }
-        .op-row:hover .op-actions { opacity:1!important; }
-      `}</style>
+                @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+                @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+                @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+                @keyframes spin   { to{transform:rotate(360deg)} }
+                input::placeholder { color:${C.textDim}; }
+                input[type="date"]::-webkit-calendar-picker-indicator { filter:${C.isDark?"invert(1)":"none"}; opacity:0.5; }
+                input:focus,select:focus { outline:none; border-color:#7b9cba !important; }
+                button:focus { outline:none; }
+                .op-row:hover { background:${C.isDark?"rgba(255,255,255,0.025)":"rgba(0,0,0,0.025)"}!important; }
+                .op-row:hover .op-actions { opacity:1!important; }
+            `}</style>
         </div>
-    );
-}
-
-function TabBtn({ label, active, onClick, C, accent }) {
-    const color = accent ? "#9b8fba" : C.blue;
-    return <button onClick={onClick} style={{ background:"none", border:"none", borderBottom:active?`2px solid ${color}`:"2px solid transparent", padding:"12px 16px", fontSize:13, fontWeight:active?600:400, color:active?color:C.textMid, cursor:"pointer", fontFamily:"'Outfit',sans-serif", transition:"all 0.15s", marginBottom:-1 }}>{label}</button>;
-}
-
-function TxRow({ tx, i, C, onUnmatch }) {
-    const s = RECON_STATUS[tx.reconciliationStatus]||RECON_STATUS.UNMATCHED;
-    const isCredit = tx.type==="CREDIT";
-    return (
-        <tr className="tx-row" style={{ borderBottom:`1px solid ${C.border}`, transition:"background 0.12s", animation:`fadeUp 0.3s ease ${i*20}ms both` }}>
-            <td style={{ padding:"13px 20px", fontSize:13, color:C.textMid }}>{fmtDate(tx.transactionDate)}</td>
-            <td style={{ padding:"13px 20px", fontSize:13, color:C.text }}>{tx.description||"—"}</td>
-            <td style={{ padding:"13px 20px", fontSize:12, color:C.textDim, fontFamily:"monospace" }}>{tx.reference||"—"}</td>
-            <td style={{ padding:"13px 20px" }}>
-                <span style={{ fontSize:13, fontWeight:600, color:isCredit?"#7aab8a":"#b07a7a" }}>{isCredit?"+":"-"}RON {fmt(Math.abs(tx.amount))}</span>
-            </td>
-            <td style={{ padding:"13px 20px" }}>
-                <span style={{ fontSize:11, color:isCredit?"#7aab8a":"#b07a7a", background:isCredit?"#7aab8a18":"#b07a7a18", border:`1px solid ${isCredit?"#7aab8a30":"#b07a7a30"}`, borderRadius:6, padding:"2px 8px", fontWeight:500 }}>{tx.type}</span>
-            </td>
-            <td style={{ padding:"13px 20px" }}>
-                <span style={{ fontSize:11, color:s.color, background:s.bg, border:`1px solid ${s.color}30`, borderRadius:6, padding:"3px 9px", fontWeight:500 }}>{s.label}</span>
-            </td>
-            <td style={{ padding:"13px 20px", textAlign:"right" }}>
-                <div style={{ display:"flex", gap:6, justifyContent:"flex-end" }}>
-                    {(tx.reconciliationStatus==="MATCHED"||tx.reconciliationStatus==="MANUALLY_MATCHED") && (
-                        <button onClick={()=>onUnmatch(tx.id)} style={{ background:"transparent", border:`1px solid ${C.border2}`, borderRadius:7, padding:"5px 10px", color:C.textMid, fontSize:11, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>Unmatch</button>
-                    )}
-                </div>
-            </td>
-        </tr>
     );
 }
 
@@ -640,7 +599,6 @@ function IBlock({ label, val, C }) {
         </div>
     );
 }
-
 function FInput({ label, val, set, ph, type="text", C }) {
     return (
         <div style={{ display:"flex", flexDirection:"column", gap:6, flex:1 }}>
@@ -650,7 +608,6 @@ function FInput({ label, val, set, ph, type="text", C }) {
         </div>
     );
 }
-
 function Overlay({ children, onClose, C }) {
     return (
         <div style={{ position:"fixed", inset:0, background:`rgba(0,0,0,${C.isDark?0.65:0.35})`, zIndex:200, display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(6px)", animation:"fadeIn 0.15s ease" }}
@@ -659,5 +616,4 @@ function Overlay({ children, onClose, C }) {
         </div>
     );
 }
-
 function Spin({ C }) { return <div style={{ width:28, height:28, border:`2px solid ${C.border2}`, borderTopColor:"#7b9cba", borderRadius:"50%", animation:"spin 0.8s linear infinite" }} />; }

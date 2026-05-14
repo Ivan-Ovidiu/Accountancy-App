@@ -21,7 +21,9 @@ public class JournalEntry {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(name = "reference_number", nullable = false, unique = true, length = 50)
+    // No longer globally unique — unique per company (enforced by DB constraint
+    // uq_journal_entries_reference_company added in V5 migration).
+    @Column(name = "reference_number", nullable = false, length = 50)
     private String referenceNumber;
 
     @Column(name = "entry_date", nullable = false)
@@ -34,11 +36,15 @@ public class JournalEntry {
     @Column(nullable = false, length = 20)
     private JournalStatus status;
 
+    // OWNING SIDE — journal entry belongs to one company
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "company_id", nullable = false)
+    private Company company;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-//INVERSE SIDE RELATIONS:
     @OneToMany(mappedBy = "journalEntry", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<JournalLine> lines;
 
@@ -48,7 +54,5 @@ public class JournalEntry {
     @OneToOne(mappedBy = "journalEntry", fetch = FetchType.LAZY)
     private Expense expense;
 
-    public enum JournalStatus {
-        DRAFT, POSTED, VOID
-    }
+    public enum JournalStatus { DRAFT, POSTED, VOID }
 }

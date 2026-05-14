@@ -6,10 +6,10 @@ import { ThemeContext } from "./App";
 
 function hexToFilter(hex) {
     const filters = {
-        "#a78bfa": "invert(63%) sepia(55%) saturate(600%) hue-rotate(210deg) brightness(105%) contrast(95%)",
-        "#7c3aed": "invert(22%) sepia(90%) saturate(800%) hue-rotate(250deg) brightness(85%) contrast(110%)",
+        "#a78bfa": "invert(67%) sepia(40%) saturate(800%) hue-rotate(210deg) brightness(110%)",
+        "#7c3aed": "invert(25%) sepia(80%) saturate(1200%) hue-rotate(250deg) brightness(80%)",
     };
-    return filters[hex?.toLowerCase()] || "invert(63%) sepia(55%) saturate(600%) hue-rotate(210deg) brightness(105%) contrast(95%)";
+    return filters[hex?.toLowerCase()] || "invert(67%) sepia(40%) saturate(800%) hue-rotate(210deg) brightness(110%)";
 }
 
 export function LogoMark({ size = 32, color }) {
@@ -20,12 +20,15 @@ export function LogoMark({ size = 32, color }) {
             src="/Logo.svg"
             alt="AccountBud logo mark"
             width={size}
-            height={Math.round(size * 0.58)}
-            style={{ display: "block", filter: hexToFilter(c), flexShrink: 0 }}
+            height={Math.round(size * 0.6)}
+            style={{
+                display: "block",
+                flexShrink: 0,
+                filter: `brightness(0) saturate(100%) ${hexToFilter(c)}`,
+            }}
         />
     );
 }
-
 export function LogoFull({ size = 32, color, textColor }) {
     const T = useContext(ThemeContext);
     const c      = color     || T?.accent || "#a78bfa";

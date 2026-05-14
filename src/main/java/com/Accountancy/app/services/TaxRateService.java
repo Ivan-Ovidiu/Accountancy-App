@@ -2,8 +2,11 @@ package com.Accountancy.app.services;
 
 import com.Accountancy.app.dto.TaxRateDTO.TaxRateRequest;
 import com.Accountancy.app.dto.TaxRateDTO.TaxRateResponse;
+import com.Accountancy.app.entities.Company;
 import com.Accountancy.app.entities.TaxRate;
+import com.Accountancy.app.repositories.CompanyRepository;
 import com.Accountancy.app.repositories.TaxRateRepository;
+import com.Accountancy.app.security.CompanyContext;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -12,13 +15,20 @@ import java.util.List;
 public class TaxRateService {
 
     private final TaxRateRepository taxRateRepository;
+    private final CompanyRepository companyRepository;
+    private final CompanyContext companyContext;
 
-    public TaxRateService(TaxRateRepository taxRateRepository) {
+    public TaxRateService(TaxRateRepository taxRateRepository,
+                          CompanyRepository companyRepository,
+                          CompanyContext companyContext) {
         this.taxRateRepository = taxRateRepository;
+        this.companyRepository = companyRepository;
+        this.companyContext = companyContext;
     }
 
     public List<TaxRateResponse> getAllTaxRates() {
-        return taxRateRepository.findByIsActiveTrue()
+        Integer companyId = companyContext.requireCurrentCompanyId();
+        return taxRateRepository.findByIsActiveTrueAndCompany_Id(companyId)
                 .stream()
                 .map(this::toResponse)
                 .toList();
@@ -29,9 +39,11 @@ public class TaxRateService {
     }
 
     public TaxRateResponse createTaxRate(TaxRateRequest request) {
-        // If this is set as default, remove default from others
+        Integer companyId = companyContext.requireCurrentCompanyId();
+        Company company = findCompany(companyId);
+
         if (Boolean.TRUE.equals(request.isDefault())) {
-            clearDefaultFlag();
+            clearDefaultFlag(companyId);
         }
 
         TaxRate taxRate = TaxRate.builder()
@@ -39,6 +51,7 @@ public class TaxRateService {
                 .rate(request.rate())
                 .type(request.type() != null ? request.type() : "VAT")
                 .isDefault(Boolean.TRUE.equals(request.isDefault()))
+                .company(company)
                 .isActive(true)
                 .build();
 
@@ -46,10 +59,11 @@ public class TaxRateService {
     }
 
     public TaxRateResponse updateTaxRate(Integer id, TaxRateRequest request) {
+        Integer companyId = companyContext.requireCurrentCompanyId();
         TaxRate taxRate = findById(id);
 
         if (Boolean.TRUE.equals(request.isDefault())) {
-            clearDefaultFlag();
+            clearDefaultFlag(companyId);
         }
 
         taxRate.setName(request.name());
@@ -66,17 +80,29 @@ public class TaxRateService {
         taxRateRepository.save(taxRate);
     }
 
-    // Only one tax rate can be default at a time
-    private void clearDefaultFlag() {
-        taxRateRepository.findByIsDefaultTrue().ifPresent(existing -> {
-            existing.setIsDefault(false);
-            taxRateRepository.save(existing);
-        });
-    }
+    // ── Helpers ──────────────────────────────────────────────────
 
     private TaxRate findById(Integer id) {
-        return taxRateRepository.findById(id)
+        Integer companyId = companyContext.requireCurrentCompanyId();
+        return taxRateRepository.findByIdAndCompany_Id(id, companyId)
                 .orElseThrow(() -> new RuntimeException("Tax rate not found: " + id));
+    }
+
+    /**
+     * Clears the default flag only within the current company — doesn't
+     * touch other companies' default tax rates.
+     */
+    private void clearDefaultFlag(Integer companyId) {
+        taxRateRepository.findByIsDefaultTrueAndCompany_Id(companyId)
+                .ifPresent(existing -> {
+                    existing.setIsDefault(false);
+                    taxRateRepository.save(existing);
+                });
+    }
+
+    private Company findCompany(Integer companyId) {
+        return companyRepository.findById(companyId)
+                .orElseThrow(() -> new RuntimeException("Company not found: " + companyId));
     }
 
     private TaxRateResponse toResponse(TaxRate t) {

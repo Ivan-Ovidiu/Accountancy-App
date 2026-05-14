@@ -6,7 +6,7 @@ const API_BASE = "http://localhost:8080";
 const PALETTE = ["#7b9cba","#7aab8a","#b07a7a","#9b8fba","#6b7a8d","#b07a7a","#7abaa8"];
 function avatarColor(name) { return PALETTE[(name?.charCodeAt(0)||0) % PALETTE.length]; }
 function initials(name)    { return (name||"?").split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase(); }
-function fmtDate(s)        { return s ? new Date(s).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : "—"; }
+function fmtDate(s)        { return s ? new Date(s).toLocaleDateString("ro-RO",{month:"short",day:"numeric",year:"numeric"}) : "—"; }
 function authHeaders()     { return { Authorization:`Bearer ${localStorage.getItem("token")}`, "Content-Type":"application/json" }; }
 
 const EMPTY = { name:"", email:"", phone:"", address:"", taxId:"" };
@@ -43,15 +43,15 @@ export default function Suppliers() {
     const close      = () => { setModal(null); setSelected(null); setErr(""); };
 
     const save = async () => {
-        if (!form.name.trim()) { setErr("Name is required."); return; }
+        if (!form.name.trim()) { setErr("Numele este obligatoriu."); return; }
         setSaving(true); setErr("");
         try {
             const url    = modal==="edit" ? `${API_BASE}/api/suppliers/${selected.id}` : `${API_BASE}/api/suppliers`;
             const method = modal==="edit" ? "PUT" : "POST";
             const res    = await fetch(url, { method, headers:authHeaders(), body:JSON.stringify(form) });
-            if (!res.ok) { const e=await res.json().catch(()=>{}); setErr(e?.message||"Failed to save."); setSaving(false); return; }
+            if (!res.ok) { const e=await res.json().catch(()=>{}); setErr(e?.message||"Eroare la salvare."); setSaving(false); return; }
             close(); load();
-        } catch { setErr("Server error."); }
+        } catch { setErr("Eroare server."); }
         setSaving(false);
     };
 
@@ -66,19 +66,16 @@ export default function Suppliers() {
 
             {/* HEADER */}
             <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:24 }}>
-                <div>
-                    <h1 style={{ fontSize:24, fontWeight:700, color:C.text, letterSpacing:"-0.5px", margin:0 }}>Suppliers</h1>
-                    <p style={{ fontSize:13, color:C.textDim, marginTop:5 }}>{active.length} supplier{active.length!==1?"s":""} active</p>
+                <div style={{ display:"flex", alignItems:"center", gap:8, background:C.card, border:`1px solid ${C.border}`, borderRadius:10, padding:"8px 14px" }}>
+                    <SearchIcon color={C.textDim} />
+                    <input style={{ border:"none", background:"transparent", fontSize:13, color:C.text, fontFamily:"'Outfit',sans-serif", width:180, outline:"none" }}
+                           placeholder="Caută furnizori..." value={search} onChange={e=>setSearch(e.target.value)} />
+                    {search && <button style={{ background:"none", border:"none", color:C.textDim, cursor:"pointer", fontSize:11, padding:0 }} onClick={()=>setSearch("")}>✕</button>}
                 </div>
                 <div style={{ display:"flex", gap:8 }}>
-                    <div style={{ display:"flex", alignItems:"center", gap:8, background:C.card, border:`1px solid ${C.border}`, borderRadius:10, padding:"8px 14px" }}>
-                        <SearchIcon color={C.textDim} />
-                        <input style={{ border:"none", background:"transparent", fontSize:13, color:C.text, fontFamily:"'Outfit',sans-serif", width:180, outline:"none" }}
-                               placeholder="Search suppliers..." value={search} onChange={e=>setSearch(e.target.value)} />
-                        {search && <button style={{ background:"none", border:"none", color:C.textDim, cursor:"pointer", fontSize:11, padding:0 }} onClick={()=>setSearch("")}>✕</button>}
-                    </div>
+
                     <button onClick={openCreate} style={{ display:"flex", alignItems:"center", gap:7, background:"#b07a7a", border:"none", borderRadius:10, padding:"9px 18px", color:C.isDark?"#0a0f17":"#fff", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>
-                        <span style={{ fontSize:18, lineHeight:1, fontWeight:300 }}>+</span> New Supplier
+                        <span style={{ fontSize:18, lineHeight:1, fontWeight:300 }}>+</span> Furnizor nou
                     </button>
                 </div>
             </div>
@@ -93,7 +90,7 @@ export default function Suppliers() {
                     <table style={{ width:"100%", borderCollapse:"collapse" }}>
                         <thead>
                         <tr style={{ borderBottom:`1px solid ${C.border}` }}>
-                            {["Supplier","Contact","Tax ID","Added",""].map((h,i)=>(
+                            {["Furnizor","Contact","CIF","Adăugat",""].map((h,i)=>(
                                 <th key={i} style={{ fontSize:10, color:C.textDim, textTransform:"uppercase", letterSpacing:"0.7px", fontWeight:600, padding:"12px 20px", textAlign:i===4?"right":"left" }}>{h}</th>
                             ))}
                         </tr>
@@ -128,7 +125,7 @@ export default function Suppliers() {
                                 <td style={{ padding:"14px 20px", textAlign:"right" }}>
                                     <div className="sup-actions" style={{ display:"flex", gap:6, justifyContent:"flex-end", opacity:0, transition:"opacity 0.15s" }}>
                                         <button onClick={()=>openEdit(s)} style={{ background:"transparent", border:`1px solid ${C.border2}`, borderRadius:8, padding:"5px 12px", color:C.textMid, fontSize:12, cursor:"pointer", fontFamily:"'Outfit',sans-serif", display:"flex", alignItems:"center", gap:5 }}>
-                                            <EditIcon /> Edit
+                                            <EditIcon /> Editează
                                         </button>
                                         <button onClick={()=>openDel(s)} style={{ background:"transparent", border:"1px solid #b07a7a30", borderRadius:8, padding:"5px 10px", color:"#b07a7a", fontSize:12, cursor:"pointer" }}>
                                             <DeleteIcon />
@@ -152,7 +149,7 @@ export default function Suppliers() {
                                     {initials(preview.name)||"?"}
                                 </div>
                                 <div>
-                                    <h2 style={{ fontSize:16, fontWeight:600, color:C.text, margin:0 }}>{modal==="create"?"New Supplier":"Edit Supplier"}</h2>
+                                    <h2 style={{ fontSize:16, fontWeight:600, color:C.text, margin:0 }}>{modal==="create"?"Furnizor nou":"Editare furnizor"}</h2>
                                     <p style={{ fontSize:12, color:C.textDim, marginTop:2 }}>{preview.name||"Enter supplier name"}</p>
                                 </div>
                             </div>
@@ -161,21 +158,21 @@ export default function Suppliers() {
 
                         <div style={{ padding:"20px 24px", display:"flex", flexDirection:"column", gap:14 }}>
                             <div style={{ display:"flex", gap:12 }}>
-                                <FInput label="Name *" val={form.name} set={v=>{ setForm(f=>({...f,name:v})); setPreview({ name:v, color:avatarColor(v) }); }} ph="Firma ABC SRL" C={C} />
-                                <FInput label="Tax ID (CIF)" val={form.taxId} set={v=>setForm(f=>({...f,taxId:v}))} ph="RO12345678" C={C} />
+                                <FInput label="Nume *" val={form.name} set={v=>{ setForm(f=>({...f,name:v})); setPreview({ name:v, color:avatarColor(v) }); }} ph="Firma ABC SRL" C={C} />
+                                <FInput label="CIF / CUI" val={form.taxId} set={v=>setForm(f=>({...f,taxId:v}))} ph="RO12345678" C={C} />
                             </div>
                             <div style={{ display:"flex", gap:12 }}>
                                 <FInput label="Email" val={form.email} set={v=>setForm(f=>({...f,email:v}))} ph="contact@firma.ro" C={C} />
-                                <FInput label="Phone" val={form.phone} set={v=>setForm(f=>({...f,phone:v}))} ph="+40 721 000 000" C={C} />
+                                <FInput label="Telefon" val={form.phone} set={v=>setForm(f=>({...f,phone:v}))} ph="+40 721 000 000" C={C} />
                             </div>
-                            <FInput label="Address" val={form.address} set={v=>setForm(f=>({...f,address:v}))} ph="Str. Exemplu nr. 1, București" C={C} />
+                            <FInput label="Adresă" val={form.address} set={v=>setForm(f=>({...f,address:v}))} ph="Str. Exemplu nr. 1, București" C={C} />
                             {err && <p style={{ fontSize:13, color:"#b07a7a", margin:0, padding:"8px 12px", background:"#b07a7a18", borderRadius:8, border:"1px solid #b07a7a30" }}>⚠ {err}</p>}
                         </div>
 
                         <div style={{ display:"flex", justifyContent:"flex-end", gap:10, padding:"16px 24px", borderTop:`1px solid ${C.border}` }}>
-                            <button onClick={close} style={{ background:"transparent", border:`1px solid ${C.border2}`, borderRadius:9, padding:"9px 18px", color:C.textMid, fontSize:13, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>Cancel</button>
+                            <button onClick={close} style={{ background:"transparent", border:`1px solid ${C.border2}`, borderRadius:9, padding:"9px 18px", color:C.textMid, fontSize:13, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>Anulează</button>
                             <button onClick={save} disabled={saving} style={{ background:"#b07a7a", border:"none", borderRadius:9, padding:"9px 22px", color:C.isDark?"#0a0f17":"#fff", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif", opacity:saving?0.7:1 }}>
-                                {saving?"Saving...":modal==="create"?"Add Supplier":"Save Changes"}
+                                {saving?"Se salvează...":modal==="create"?"Adaugă furnizor":"Salvează"}
                             </button>
                         </div>
                     </div>
@@ -187,18 +184,18 @@ export default function Suppliers() {
                 <Overlay onClose={close} C={C}>
                     <div style={{ background:C.card, border:`1px solid ${C.border2}`, borderRadius:18, width:"100%", maxWidth:400 }}>
                         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"20px 24px", borderBottom:`1px solid ${C.border}` }}>
-                            <span style={{ fontSize:16, fontWeight:600, color:C.text }}>Deactivate Supplier</span>
+                            <span style={{ fontSize:16, fontWeight:600, color:C.text }}>Dezactivare furnizor</span>
                             <button onClick={close} style={{ background:"none", border:`1px solid ${C.border}`, borderRadius:8, color:C.textMid, fontSize:14, cursor:"pointer", padding:"4px 10px" }}>✕</button>
                         </div>
                         <div style={{ padding:"20px 24px" }}>
                             <p style={{ fontSize:14, color:C.textMid, lineHeight:1.7, margin:0 }}>
-                                Deactivate <strong style={{ color:C.text }}>{selected?.name}</strong>? This will hide them from new invoice forms.
+                                Dezactivezi <strong style={{ color:C.text }}>{selected?.name}</strong>? Va fi ascuns din formularele de facturi noi.
                             </p>
                         </div>
                         <div style={{ display:"flex", justifyContent:"flex-end", gap:10, padding:"16px 24px", borderTop:`1px solid ${C.border}` }}>
-                            <button onClick={close} style={{ background:"transparent", border:`1px solid ${C.border2}`, borderRadius:9, padding:"9px 18px", color:C.textMid, fontSize:13, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>Cancel</button>
+                            <button onClick={close} style={{ background:"transparent", border:`1px solid ${C.border2}`, borderRadius:9, padding:"9px 18px", color:C.textMid, fontSize:13, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>Anulează</button>
                             <button onClick={del} disabled={saving} style={{ background:"#b07a7a", border:"none", borderRadius:9, padding:"9px 20px", color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif", opacity:saving?0.7:1 }}>
-                                {saving?"Deactivating...":"Deactivate"}
+                                {saving?"Se dezactivează...":"Dezactivează"}
                             </button>
                         </div>
                     </div>
@@ -237,10 +234,10 @@ function Empty({ onAdd, C }) {
                 <svg width="22" height="22" viewBox="0 0 16 16" fill="none"><rect x="1" y="4" width="14" height="9" rx="2" stroke="#b07a7a" strokeWidth="1.3"/><path d="M5 4V3a3 3 0 0 1 6 0v1" stroke="#b07a7a" strokeWidth="1.3"/></svg>
             </div>
             <div style={{ textAlign:"center" }}>
-                <p style={{ fontSize:15, fontWeight:600, color:C.text, margin:0 }}>No suppliers yet</p>
-                <p style={{ fontSize:13, color:C.textDim, marginTop:6 }}>Add your first supplier to start recording purchase invoices</p>
+                <p style={{ fontSize:15, fontWeight:600, color:C.text, margin:0 }}>Niciun furnizor</p>
+                <p style={{ fontSize:13, color:C.textDim, marginTop:6 }}>Adaugă primul furnizor pentru a înregistra facturi de achiziție</p>
             </div>
-            <button onClick={onAdd} style={{ background:"#b07a7a", border:"none", borderRadius:10, padding:"9px 20px", color:C.isDark?"#0a0f17":"#fff", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>+ New Supplier</button>
+            <button onClick={onAdd} style={{ background:"#b07a7a", border:"none", borderRadius:10, padding:"9px 20px", color:C.isDark?"#0a0f17":"#fff", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>+ Furnizor nou</button>
         </div>
     );
 }

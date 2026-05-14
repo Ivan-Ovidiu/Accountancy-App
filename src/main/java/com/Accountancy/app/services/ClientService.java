@@ -3,7 +3,10 @@ package com.Accountancy.app.services;
 import com.Accountancy.app.dto.ClientDTO.ClientRequest;
 import com.Accountancy.app.dto.ClientDTO.ClientResponse;
 import com.Accountancy.app.entities.Client;
+import com.Accountancy.app.entities.Company;
 import com.Accountancy.app.repositories.ClientRepository;
+import com.Accountancy.app.repositories.CompanyRepository;
+import com.Accountancy.app.security.CompanyContext;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -12,31 +15,40 @@ import java.util.List;
 public class ClientService {
 
     private final ClientRepository clientRepository;
+    private final CompanyRepository companyRepository;
+    private final CompanyContext companyContext;
 
-    public ClientService(ClientRepository clientRepository) {
+    public ClientService(ClientRepository clientRepository,
+                         CompanyRepository companyRepository,
+                         CompanyContext companyContext) {
         this.clientRepository = clientRepository;
+        this.companyRepository = companyRepository;
+        this.companyContext = companyContext;
     }
 
-    // GET all active clients
     public List<ClientResponse> getAllClients() {
-        return clientRepository.findByIsActiveTrue()
+        Integer companyId = companyContext.requireCurrentCompanyId();
+        return clientRepository.findByIsActiveTrueAndCompany_Id(companyId)
                 .stream()
                 .map(this::toResponse)
                 .toList();
     }
 
-    // GET single client by id
     public ClientResponse getClientById(Integer id) {
-        Client client = clientRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Client not found: " + id));
-        return toResponse(client);
+        return toResponse(findById(id));
     }
 
-    // POST — create new client
+    public List<ClientResponse> searchClients(String name) {
+        Integer companyId = companyContext.requireCurrentCompanyId();
+        return clientRepository.findByNameContainingIgnoreCaseAndCompany_Id(name, companyId)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     public ClientResponse createClient(ClientRequest request) {
-        if (request.name() == null || request.name().isBlank()) {
-            throw new RuntimeException("Client name is required");
-        }
+        Integer companyId = companyContext.requireCurrentCompanyId();
+        Company company = findCompany(companyId);
 
         Client client = Client.builder()
                 .name(request.name())
@@ -44,16 +56,15 @@ public class ClientService {
                 .phone(request.phone())
                 .address(request.address())
                 .taxId(request.taxId())
+                .company(company)
                 .isActive(true)
                 .build();
 
         return toResponse(clientRepository.save(client));
     }
 
-    // PUT — update existing client
     public ClientResponse updateClient(Integer id, ClientRequest request) {
-        Client client = clientRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Client not found: " + id));
+        Client client = findById(id);
 
         client.setName(request.name());
         client.setEmail(request.email());
@@ -64,23 +75,29 @@ public class ClientService {
         return toResponse(clientRepository.save(client));
     }
 
-    // DELETE — soft delete (sets is_active = false, never deletes from DB)
     public void deactivateClient(Integer id) {
-        Client client = clientRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Client not found: " + id));
+        Client client = findById(id);
         client.setIsActive(false);
         clientRepository.save(client);
     }
 
-    // Search clients by name
-    public List<ClientResponse> searchClients(String name) {
-        return clientRepository.findByNameContainingIgnoreCase(name)
-                .stream()
-                .map(this::toResponse)
-                .toList();
+    // ── Helpers ──────────────────────────────────────────────────
+
+    /**
+     * Secure fetch — throws 404 if the client doesn't exist OR doesn't
+     * belong to the current company. Prevents cross-company data access.
+     */
+    private Client findById(Integer id) {
+        Integer companyId = companyContext.requireCurrentCompanyId();
+        return clientRepository.findByIdAndCompany_Id(id, companyId)
+                .orElseThrow(() -> new RuntimeException("Client not found: " + id));
     }
 
-    // Converts Entity → DTO (never expose the entity directly to the controller)
+    private Company findCompany(Integer companyId) {
+        return companyRepository.findById(companyId)
+                .orElseThrow(() -> new RuntimeException("Company not found: " + companyId));
+    }
+
     private ClientResponse toResponse(Client client) {
         return new ClientResponse(
                 client.getId(),

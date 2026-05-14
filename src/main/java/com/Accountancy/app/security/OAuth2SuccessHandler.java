@@ -15,6 +15,15 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.util.UUID;
 
+/**
+ * After Google OAuth2 succeeds, we issue a pre-auth token (NOT a final
+ * token) and redirect to the frontend's /select-company route. There the
+ * user picks one of the companies they have access to, the frontend calls
+ * /api/auth/select-company, and only then receives a usable final token.
+ *
+ * For a brand-new OAuth2 user, the company list will be empty — the
+ * frontend should show "No company access — contact your administrator".
+ */
 @Component
 @RequiredArgsConstructor
 public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
@@ -48,10 +57,13 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
             return userRepository.save(newUser);
         });
 
-        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
+        // Issue a PRE-AUTH token only — the frontend will call
+        // /api/auth/select-company to obtain the final usable token.
+        String preAuthToken = jwtUtil.generatePreAuthToken(
+                user.getEmail(), user.getRole().name());
 
-        String redirectUrl = frontendUrl + "/oauth2/callback"
-                + "?token=" + token
+        String redirectUrl = frontendUrl + "/select-company"
+                + "?preAuthToken=" + preAuthToken
                 + "&email=" + encode(user.getEmail())
                 + "&name="  + encode(user.getName())
                 + "&role="  + user.getRole().name();

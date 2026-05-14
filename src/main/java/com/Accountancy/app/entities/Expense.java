@@ -7,26 +7,35 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Entity
 @Table(name = "expenses")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class Expense {
+
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false) private User user;
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "account_id", nullable = false) private Account account;
+    @JoinColumn(name = "account_id", nullable = false)
+    private Account account;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "journal_entry_id") private JournalEntry journalEntry;
+    @JoinColumn(name = "journal_entry_id")
+    private JournalEntry journalEntry;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "tax_rate_id") private TaxRate taxRate;
+    @JoinColumn(name = "tax_rate_id")
+    private TaxRate taxRate;
+
+    // OWNING SIDE — expense belongs to one company
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "company_id", nullable = false)
+    private Company company;
 
     @Column(length = 255) private String description;
     @Column(nullable = false, precision = 18, scale = 2) private BigDecimal amount;
@@ -34,10 +43,12 @@ public class Expense {
     @Column(name = "receipt_url", length = 500) private String receiptUrl;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20) private ExpenseStatus status;
+    @Column(nullable = false, length = 20)
+    private ExpenseStatus status = ExpenseStatus.PENDING;
 
     @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false) private LocalDateTime createdAt;
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
     public enum ExpenseStatus { PENDING, APPROVED, REJECTED }
 }

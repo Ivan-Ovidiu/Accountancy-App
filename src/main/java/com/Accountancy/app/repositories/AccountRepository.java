@@ -1,6 +1,6 @@
 package com.Accountancy.app.repositories;
 
-import com.Accountancy.app.entities.*;
+import com.Accountancy.app.entities.Account;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -9,9 +9,18 @@ import java.util.Optional;
 
 @Repository
 public interface AccountRepository extends JpaRepository<Account, Integer> {
-    Optional<Account> findByCode(String code);
-    List<Account> findByType(Account.AccountType type);
-    List<Account> findByParentIsNull();           // root accounts only
-    List<Account> findByParentId(Integer parentId);
+
     List<Account> findByIsActiveTrue();
+
+    List<Account> findByTypeAndIsActiveTrue(Account.AccountType type);
+
+    List<Account> findByParentIsNullAndIsActiveTrue();
+
+    List<Account> findByParentId(Integer parentId);
+
+    Optional<Account> findByCode(String code);
+
+    boolean existsByCode(String code);
+
+    boolean existsByCodeAndIdNot(String code, Integer id);
 }
